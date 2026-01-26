@@ -1,0 +1,19 @@
+{
+  "name": "Arbicon",
+  "short_name": "Arbicon",
+  "description": "Stok & laporan kawat.",
+  "start_url": "/app/home",
+  "scope": "/app/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#118EEA",
+  "background_color": "#0B5ED7",
+  "icons": [
+    {
+      "src": "/pwa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

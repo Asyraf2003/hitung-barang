@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#118EEA">
+<title>Arbicon • Offline</title>
+
+<style>
+  body{
+    margin:0;
+    background:#118EEA;
+    color:#fff;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:16px;
+    box-sizing:border-box;
+    touch-action: manipulation;
+  }
+  .card{
+    width:min(360px, 92vw);
+    background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.25);
+    border-radius:22px;
+    padding:16px;
+    text-align:center;
+  }
+  h1{font-size:16px;margin:0}
+  p{font-size:13px;opacity:.85;margin:6px 0 12px;line-height:1.35}
+  canvas{
+    width:100%;
+    height:auto;
+    background:rgba(0,0,0,.18);
+    border-radius:14px;
+    display:block;
+    margin:0 auto;
+  }
+  .info{
+    margin-top:10px;
+    font-size:13px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .pill{
+    background:rgba(255,255,255,.18);
+    border:1px solid rgba(255,255,255,.22);
+    padding:6px 10px;
+    border-radius:999px;
+    font-weight:700;
+    font-size:12px;
+  }
+  .btn{
+    appearance:none;
+    border:none;
+    border-radius:999px;
+    padding:8px 12px;
+    font-weight:800;
+    font-size:12px;
+    background:#fff;
+    color:#118EEA;
+  }
+</style>
+</head>
+
+<body>
+  <div class="card">
+    <h1>Offline</h1>
+    <p>Geser layar untuk gerakkan ular. Cocok buat nunggu jaringan balik.</p>
+
+    <canvas id="game" width="240" height="240"></canvas>
+
+    <div class="info">
+      <div class="pill">Skor: <span id="score">0</span></div>
+      <button class="btn" id="resetBtn" type="button">Reset</button>
+    </div>
+  </div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+document.getElementById('resetBtn').addEventListener('click', resetGame);
+
+// Grid kecil biar jelas di HP
+const GRID = 12;
+const TILE = canvas.width / GRID;
+
+// Speed lebih lambat untuk HP
+const TICK_MS = 270;
+
+let snake, dir, nextDir, food, score, alive;
+let touchStartX = 0, touchStartY = 0;
+
+function resetGame() {
+  snake = [{ x: 5, y: 5 }];
+  dir = { x: 1, y: 0 };
+  nextDir = { x: 1, y: 0 };
+  score = 0;
+  alive = true;
+  food = spawnFood();
+  scoreEl.textContent = score;
+  draw();
+}
+
+function spawnFood() {
+  while (true) {
+    const f = {
+      x: Math.floor(Math.random() * GRID),
+      y: Math.floor(Math.random() * GRID)
+    };
+    if (!snake.some(s => s.x === f.x && s.y === f.y)) return f;
+  }
+}
+
+function setDirection(nx, ny) {
+  // jangan boleh balik arah langsung
+  if (nx === -dir.x && ny === -dir.y) return;
+  nextDir = { x: nx, y: ny };
+}
+
+// Swipe control (HP-only behavior)
+canvas.addEventListener('touchstart', (e) => {
+  const t = e.touches[0];
+  touchStartX = t.clientX;
+  touchStartY = t.clientY;
+}, { passive: true });
+
+canvas.addEventListener('touchend', (e) => {
+  const t = e.changedTouches[0];
+  const dx = t.clientX - touchStartX;
+  const dy = t.clientY - touchStartY;
+
+  const TH = 26; // threshold kecil tapi nggak sensitif
+  if (Math.abs(dx) < TH && Math.abs(dy) < TH) return;
+
+  if (Math.abs(dx) > Math.abs(dy)) {
+    if (dx > 0) setDirection(1, 0);
+    else setDirection(-1, 0);
+  } else {
+    if (dy > 0) setDirection(0, 1);
+    else setDirection(0, -1);
+  }
+}, { passive: true });
+
+// Biar halaman tidak scroll saat main
+document.addEventListener('touchmove', (e) => {
+  if (e.target === canvas) e.preventDefault();
+}, { passive: false });
+
+function update() {
+  if (!alive) return;
+
+  // commit direction per tick, biar kontrol stabil
+  dir = nextDir;
+
+  const head = {
+    x: snake[0].x + dir.x,
+    y: snake[0].y + dir.y
+  };
+
+  // wall hit
+  if (head.x < 0 || head.y < 0 || head.x >= GRID || head.y >= GRID) {
+    alive = false;
+    return;
+  }
+
+  // self hit
+  if (snake.some(s => s.x === head.x && s.y === head.y)) {
+    alive = false;
+    return;
+  }
+
+  snake.unshift(head);
+
+  if (head.x === food.x && head.y === food.y) {
+    score++;
+    scoreEl.textContent = score;
+    food = spawnFood();
+  } else {
+    snake.pop();
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // food
+  ctx.fillStyle = '#ffd166';
+  ctx.fillRect(food.x * TILE + 2, food.y * TILE + 2, TILE - 4, TILE - 4);
+
+  // snake
+  ctx.fillStyle = '#9effc7';
+  for (let i = 0; i < snake.length; i++) {
+    const s = snake[i];
+    ctx.fillRect(s.x * TILE + 1, s.y * TILE + 1, TILE - 2, TILE - 2);
+  }
+
+  if (!alive) {
+    ctx.fillStyle = '#fff';
+    ctx.font = '16px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2);
+    ctx.font = '12px system-ui';
+    ctx.fillText('Tap Reset untuk ulang', canvas.width / 2, canvas.height / 2 + 18);
+  }
+}
+
+resetGame();
+setInterval(() => { update(); draw(); }, TICK_MS);
+</script>
+</body>
+</html>

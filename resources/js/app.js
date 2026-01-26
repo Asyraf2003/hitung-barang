@@ -1,0 +1,11 @@
+import './bootstrap';
+import './app/pjax';
+import './app/charts';
+import './app/input-toggle';
+import './app/input-balance';
+import './app/diameter-picker';
+import './app/greeting';
+import './app/menu';
+import './app/nav-active';
+import './app/splash';
+import './app/history-actions';
