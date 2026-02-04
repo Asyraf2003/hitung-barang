@@ -10,6 +10,10 @@
   $selectedItem = old('item_id', request()->query('item_id', $prefillItemId ?? ''));
   $selectedType = old('item_type_id', request()->query('item_type_id', ''));
 
+  $useNewItem = old('use_new_item', request()->query('use_new_item', '0')) === '1';
+  $newItemName = old('item_name', request()->query('item_name', ''));
+  $newItemCode = old('item_code', request()->query('item_code', ''));
+
   $diam = old('diameter_mm', request()->query('diameter_mm', ''));
 @endphp
 
@@ -43,11 +47,22 @@
       @error('type') <div class="text-xs text-red-600">{{ $message }}</div> @enderror
 
       <div class="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm space-y-3">
-        <div>
-          <label class="text-sm font-semibold text-slate-600">Barang</label>
+        {{-- BARANG --}}
+        <div class="flex items-center justify-between">
+          <div class="text-sm font-semibold text-slate-600">Barang</div>
+
+          <label class="text-xs font-semibold text-slate-600 flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="use_new_item" value="1" {{ $useNewItem ? 'checked' : '' }}>
+            Tambah baru
+          </label>
+        </div>
+
+        {{-- pilih dari list --}}
+        <div id="itemSelectWrap" class="{{ $useNewItem ? 'hidden' : '' }}">
+          <label class="text-xs text-slate-500">Pilih barang</label>
           <select id="itemSelect" name="item_id"
             class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-3 py-2 outline-none
-                   focus:border-[#118EEA] focus:ring-2 focus:ring-[#118EEA]/20">
+                  focus:border-[#118EEA] focus:ring-2 focus:ring-[#118EEA]/20">
             <option value="">-- pilih --</option>
             @foreach($item_options as $opt)
               <option value="{{ $opt['id'] }}" {{ (string)$selectedItem===(string)$opt['id']?'selected':'' }}>
@@ -58,7 +73,29 @@
           @error('item_id') <div class="mt-1 text-xs text-red-600">{{ $message }}</div> @enderror
         </div>
 
-        <div class="flex items-center justify-between">
+        {{-- input manual barang baru --}}
+        <div id="itemInputWrap" class="{{ $useNewItem ? '' : 'hidden' }} space-y-2">
+          <div>
+            <label class="text-xs text-slate-500">Nama barang baru</label>
+            <input name="item_name" value="{{ $newItemName }}"
+              class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-3 py-2 outline-none
+                    focus:border-[#118EEA] focus:ring-2 focus:ring-[#118EEA]/20"
+              placeholder="contoh: Kawat Galvanis">
+            @error('item_name') <div class="mt-1 text-xs text-red-600">{{ $message }}</div> @enderror
+          </div>
+
+          <div>
+            <label class="text-xs text-slate-500">Kode (opsional, unik)</label>
+            <input name="item_code" value="{{ $newItemCode }}"
+              class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-3 py-2 outline-none
+                    focus:border-[#118EEA] focus:ring-2 focus:ring-[#118EEA]/20"
+              placeholder="contoh: WIRE_GALV">
+            @error('item_code') <div class="mt-1 text-xs text-red-600">{{ $message }}</div> @enderror
+          </div>
+        </div>
+
+        {{-- TIPE BARANG --}}
+        <div class="flex items-center justify-between pt-1">
           <div class="text-sm font-semibold">Tipe Barang</div>
 
           <label class="text-xs font-semibold text-slate-600 flex items-center gap-2 cursor-pointer">
@@ -72,7 +109,7 @@
           <label class="text-xs text-slate-500">Pilih tipe</label>
           <select id="itemTypeSelect" name="item_type_id"
             class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-3 py-2 outline-none
-                   focus:border-[#118EEA] focus:ring-2 focus:ring-[#118EEA]/20">
+                  focus:border-[#118EEA] focus:ring-2 focus:ring-[#118EEA]/20">
             <option value="">-- pilih --</option>
             @foreach($type_options as $opt)
               <option value="{{ $opt['id'] }}"
@@ -90,7 +127,7 @@
           <label class="text-xs text-slate-500">Tipe baru (diameter mm)</label>
           <input id="diameterInput" name="diameter_mm" value="{{ $diam }}" inputmode="decimal"
             class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-3 py-2 outline-none
-                   focus:border-[#118EEA] focus:ring-2 focus:ring-[#118EEA]/20"
+                  focus:border-[#118EEA] focus:ring-2 focus:ring-[#118EEA]/20"
             placeholder="contoh: 0.20">
           @error('diameter_mm') <div class="mt-1 text-xs text-red-600">{{ $message }}</div> @enderror
         </div>

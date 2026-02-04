@@ -11,6 +11,10 @@ function initTypePicker(root = document) {
   const wrapInput = form.querySelector('#typeInputWrap');
 
   const itemSelect = form.querySelector('#itemSelect');
+  const chkNewItem = form.querySelector('input[name="use_new_item"]');
+  const wrapItemSelect = form.querySelector('#itemSelectWrap');
+  const wrapItemInput = form.querySelector('#itemInputWrap');
+
   const typeSelect = form.querySelector('#itemTypeSelect');
   const diam = form.querySelector('#diameterInput');
 
@@ -46,9 +50,29 @@ function initTypePicker(root = document) {
     if (applying) return;
     applying = true;
 
-    const useNew = chk.checked;
-    wrapSelect.classList.toggle('hidden', useNew);
-    wrapInput.classList.toggle('hidden', !useNew);
+    const useNewType = chk.checked;
+    wrapSelect.classList.toggle('hidden', useNewType);
+    wrapInput.classList.toggle('hidden', !useNewType);
+
+    // Toggle UI "barang baru"
+    const useNewItem = !!(chkNewItem && chkNewItem.checked);
+
+    if (wrapItemSelect) wrapItemSelect.classList.toggle('hidden', useNewItem);
+    if (wrapItemInput)  wrapItemInput.classList.toggle('hidden', !useNewItem);
+
+    if (useNewItem) {
+      // Barang baru belum punya item_id, jadi jangan biarkan select terisi
+      if (itemSelect.value) {
+        itemSelect.value = '';
+      }
+
+      // Karena movement butuh item_type_id, barang baru WAJIB bikin tipe baru
+      if (!chk.checked) {
+        chk.checked = true;
+        wrapSelect.classList.add('hidden');
+        wrapInput.classList.remove('hidden');
+      }
+    }
 
     filterTypeOptions();
 
@@ -60,6 +84,7 @@ function initTypePicker(root = document) {
 
   chk.addEventListener('change', apply);
   itemSelect.addEventListener('change', apply);
+  if (chkNewItem) chkNewItem.addEventListener('change', apply);
 
   // PENTING: JANGAN pasang typeSelect change -> apply
   // karena apply sendiri memicu typeSelect change untuk refresh balance.

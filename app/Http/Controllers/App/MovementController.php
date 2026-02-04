@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\App;
 
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use RuntimeException;
 use App\Domain\Inventory\InventoryService;
 use App\Http\Controllers\Controller;
 use App\Models\ItemType;
-use Illuminate\Http\Request;
-use RuntimeException;
+use App\Models\Item;
 
 final class MovementController extends Controller
 {
@@ -29,22 +31,75 @@ final class MovementController extends Controller
         $data = $request->validate([
             'type' => ['required', 'in:IN,OUT'],
 
-            'item_id' => ['required', 'integer', 'min:1'],
+            'use_new_item' => ['nullable', 'in:1'],
+            'item_id' => ['required_without:use_new_item', 'nullable', 'integer', 'min:1'],
+            'item_name' => ['required_if:use_new_item,1', 'nullable', 'string', 'max:100'],
+            'item_code' => ['nullable', 'string', 'max:32', 'regex:/^[A-Za-z0-9_]+$/'],
 
             'use_new_type' => ['nullable', 'in:1'],
             'item_type_id' => ['nullable', 'integer', 'min:1'],
 
-            // diameter hanya dipakai saat use_new_type=1 (khusus wire)
             'diameter_mm' => ['nullable', 'string', 'max:20', 'regex:/^\d+([.,]\d{1,2})?$/'],
-
-            // qty dalam kg, max 2 desimal
             'qty_kg' => ['required', 'string', 'max:20', 'regex:/^\d+(\.\d{1,2})?$/'],
 
             'note' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $useNew = ($data['use_new_type'] ?? null) === '1';
-        $itemId = (int) $data['item_id'];
+        $useNewItem = ($data['use_new_item'] ?? null) === '1';
+        $useNewType = ($data['use_new_type'] ?? null) === '1';
+
+        if ($useNewItem) {
+            $name = trim((string) ($data['item_name'] ?? ''));
+            if ($name === '') {
+                return back()->withInput()->withErrors(['item_name' => 'Nama barang wajib diisi']);
+            }
+
+            $codeRaw = strtoupper(trim((string) ($data['item_code'] ?? '')));
+
+            if ($codeRaw !== '') {
+                $code = preg_replace('/[^A-Z0-9_]/', '', $codeRaw);
+                $code = substr($code, 0, 32);
+
+                if ($code === '') {
+                    return back()->withInput()->withErrors(['item_code' => 'Kode tidak valid']);
+                }
+                if (Item::query()->where('code', $code)->exists()) {
+                    return back()->withInput()->withErrors(['item_code' => 'Kode sudah dipakai']);
+                }
+            } else {
+                $base = Str::upper(Str::snake(Str::ascii($name)));
+                $base = preg_replace('/[^A-Z0-9_]/', '', $base);
+                $base = trim($base, '_');
+                if ($base === '') $base = 'ITEM';
+
+                $code = substr($base, 0, 32);
+                $i = 2;
+                while (Item::query()->where('code', $code)->exists()) {
+                    $suffix = '_' . $i;
+                    $maxBaseLen = 32 - strlen($suffix);
+                    $code = substr($base, 0, max(1, $maxBaseLen)) . $suffix;
+                    $i++;
+                }
+            }
+
+            $item = Item::query()->create([
+                'code' => $code,
+                'name' => $name,
+                'unit' => 'kg',
+                'meta' => null,
+            ]);
+
+            $itemId = (int) $item->id;
+
+            // Barang baru wajib bikin type juga (karena movement butuh item_type_id)
+            if (!$useNewType) {
+                return back()->withInput()->withErrors(['use_new_type' => 'Untuk barang baru, tipe wajib dibuat juga']);
+            }
+        } else {
+            $itemId = (int) ($data['item_id'] ?? 0);
+        }
+
+        $useNew = $useNewType;
 
         // Resolve item type
         if ($useNew) {

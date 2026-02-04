@@ -10,14 +10,9 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        User::query()->updateOrCreate(
-            ['email' => 'admin@gmail.com'],
-            [
-                'name' => 'Pak Bos',
-                'password' => Hash::make('12345678'),
-            ]
-        );
-
-        $this->call(DemoInventorySeeder::class);
+        $this->call([
+            UserSeeder::class,
+            DemoInventorySeeder::class,
+        ]);
     }
 }
