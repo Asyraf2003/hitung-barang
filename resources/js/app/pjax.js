@@ -2,9 +2,22 @@ function qs(sel, root = document) {
   return root.querySelector(sel);
 }
 
+function toFullPath(input) {
+  // pastikan selalu simpan query (?a=b) dan hash (#x)
+  const u = new URL(String(input || ''), window.location.origin);
+  return u.pathname + u.search + u.hash;
+}
+
+function navKey(input) {
+  // buat highlight nav: cukup pathname saja (biar /app/reports?x=y tetap highlight "reports")
+  const u = new URL(String(input || ''), window.location.origin);
+  return u.pathname;
+}
+
 function setActiveNav(url) {
+  const key = navKey(url);
   document.querySelectorAll('[data-nav]').forEach((a) => {
-    const active = a.getAttribute('data-nav') === url;
+    const active = a.getAttribute('data-nav') === key;
 
     a.classList.toggle('bg-[#118EEA]/10', active);
     a.classList.toggle('text-[#118EEA]', active);
@@ -21,7 +34,9 @@ export function initPJAX() {
   const exitYes = qs('#exitYes');
   const exitNo = qs('#exitNo');
 
-  let lastUrl = location.pathname === '/app' ? '/app/home' : location.pathname;
+  const current = window.location.pathname + window.location.search + window.location.hash;
+  let lastUrl = window.location.pathname === '/app' ? '/app/home' : current;
+
   let busy = false;
 
   const setLoading = (on) => {
@@ -30,8 +45,12 @@ export function initPJAX() {
   };
 
   async function load(url, { push = true } = {}) {
-    window.__pjaxLoad = (url, opts) => load(url, opts);
+    url = toFullPath(url);
+
+    // expose helpers (biar modul lain aman)
+    window.__pjaxLoad = (u, opts) => load(u, opts);
     window.__pjaxReload = () => load(lastUrl, { push: false });
+
     if (busy) return;
     busy = true;
     setLoading(true);
@@ -83,7 +102,7 @@ export function initPJAX() {
 
     const onNo = () => {
       cleanup();
-      // tahan user di app: dorong balik ke lastUrl
+      // tahan user di app: dorong balik ke lastUrl (FULL PATH)
       history.pushState({ __pjax: true, url: lastUrl }, '', lastUrl);
       load(lastUrl, { push: false });
     };
@@ -96,11 +115,11 @@ export function initPJAX() {
     const a = e.target.closest('a[data-pjax]');
     if (!a) return;
 
-    const url = a.getAttribute('href');
-    if (!url || url.startsWith('http')) return;
+    const href = a.getAttribute('href');
+    if (!href || href.startsWith('http') || href.startsWith('#')) return;
 
     e.preventDefault();
-    load(url);
+    load(href);
   });
 
   document.addEventListener('submit', (e) => {
@@ -109,13 +128,13 @@ export function initPJAX() {
 
     e.preventDefault();
 
-    const action = form.getAttribute('action') || location.pathname;
+    const action = form.getAttribute('action') || window.location.pathname; // action biasanya tanpa query
     const fd = new FormData(form);
     const params = new URLSearchParams();
 
     for (const [k, v] of fd.entries()) {
-        const val = (v ?? '').toString().trim();
-        if (val !== '') params.append(k, val);
+      const val = (v ?? '').toString().trim();
+      if (val !== '') params.append(k, val);
     }
 
     const url = params.toString() ? `${action}?${params.toString()}` : action;
@@ -131,18 +150,19 @@ export function initPJAX() {
     showExitConfirm();
   });
 
-  // Bikin base history di /app supaya back pertama bisa kita tahan dengan modal
-  const desired = location.pathname === '/app' ? '/app/home' : location.pathname;
+  // Base history di /app supaya back pertama bisa kita tahan dengan modal
+  const desired = window.location.pathname === '/app'
+    ? '/app/home'
+    : (window.location.pathname + window.location.search + window.location.hash);
 
-  if (location.pathname !== '/app') {
+  if (window.location.pathname !== '/app') {
     history.replaceState(null, '', '/app');
-    history.pushState({ __pjax: true, url: desired }, '', desired);
+    history.pushState({ __pjax: true, url: toFullPath(desired) }, '', toFullPath(desired));
   } else {
-    history.pushState({ __pjax: true, url: desired }, '', desired);
+    history.pushState({ __pjax: true, url: toFullPath(desired) }, '', toFullPath(desired));
   }
 
   load(desired, { push: false });
 }
 
 document.addEventListener('DOMContentLoaded', initPJAX);
-
