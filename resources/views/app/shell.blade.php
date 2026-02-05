@@ -7,9 +7,31 @@
   <meta name="theme-color" content="#118EEA">
   <meta name="csrf-token" content="{{ csrf_token() }}">
 
-  <title>Arbicon</title>
+  <title>Arbicon | Dashboard Manajemen Stok & Inventori</title>
+  <meta name="description" content="Arbicon - Solusi manajemen stok dan laporan inventori praktis. Pantau riwayat transaksi dan kelola input data barang dengan mudah dalam satu aplikasi.">
+  
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Arbicon",
+    "operatingSystem": "Web",
+    "applicationCategory": "BusinessApplication",
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "5",
+      "reviewCount": "1"
+    },
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "IDR"
+    }
+  }
+  </script>
+  
   <link rel="manifest" href="/manifest.webmanifest">
-
+  
   @vite(['resources/css/app.css','resources/js/app.js'])
 </head>
 <body class="bg-[#F5F7FB] text-slate-900">
@@ -45,9 +67,9 @@
           </div>
 
           <div class="flex gap-2">
-            <button id="btnMenu"
-              class="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white font-bold"
-              aria-label="Menu">
+            <button id="btnMenu" 
+                class="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white font-bold" 
+                aria-label="Buka Menu Opsi">
               ⋮
             </button>
           </div>
@@ -83,14 +105,14 @@
           <svg viewBox="0 0 24 24" fill="currentColor" class="w-7 h-7">
             <path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5z"/>
           </svg>
-          <div class="mt-1 text-sm text-200 color:white">Beranda</div>
+          <span class="mt-1 text-sm text-200 color:white">Beranda</span>
         </a>
 
         <a href="/app/stock" data-nav="/app/stock" class="flex flex-col items-center justify-center transition-all duration-200">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-7 h-7">
             <path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round"/>
           </svg>
-          <div class="mt-1 text-sm text-200 color:white">Stok</div>
+          <span class="mt-1 text-sm text-200 color:white">Stok</span>
         </a>
 
         <a href="/app/input" data-nav="/app/input" class="relative flex flex-col items-center justify-center">
@@ -99,7 +121,7 @@
               <path d="M12 5v14M5 12h14" stroke-linecap="round"/>
             </svg>
           </div>
-          <div class="mt-1 text-sm text-200 color:white">Input</div>
+          <span class="mt-1 text-sm text-200 color:white">Input</span>
         </a>
 
         <a href="/app/history" data-nav="/app/history" class="flex flex-col items-center justify-center transition-all duration-200">
@@ -107,14 +129,14 @@
             <path d="M12 8v5l3 2" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M3 12a9 9 0 1 0 3-6.7" stroke-linecap="round"/>
           </svg>
-          <div class="mt-1 text-sm text-200 color:white">Riwayat</div>
+          <span class="mt-1 text-sm text-200 color:white">Riwayat</span>
         </a>
 
         <a href="/app/reports" data-nav="/app/reports" class="flex flex-col items-center justify-center transition-all duration-200">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-7 h-7">
             <path d="M7 3h7l3 3v15a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" stroke-linejoin="round"/>
           </svg>
-          <div class="mt-1 text-sm text-200 color:white">Laporan</div>
+          <span class="mt-1 text-sm text-200 color:white">Laporan</span>
         </a>
 
       </div>

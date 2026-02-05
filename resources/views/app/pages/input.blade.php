@@ -20,7 +20,7 @@
 <div class="space-y-3">
   <div class="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">
     <div class="text-base font-semibold">Input</div>
-    <div class="mt-1 text-sm text-slate-500">Masuk/Keluar stok. Berat pakai kg (contoh: 0.30).</div>
+    <div class="mt-1 text-sm text-slate-500">Masuk/Keluar stok. Berat pakai kg (contoh: 0,30).</div>
   </div>
 
   <div class="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">
