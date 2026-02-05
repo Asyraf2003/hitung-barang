@@ -29,7 +29,7 @@
   <div id="app" class="min-h-dvh flex flex-col">
     {{-- Top bar (DANA-ish) --}}
     <header class="sticky top-0 z-20 overflow-hidden">
-      <div class="bg-[#118EEA] px-4 pt-8 pb-5 rounded-b-[30px] shadow-lg">
+      <div class="bg-[#118EEA] px-4 py-4 rounded-b-[30px] shadow-lg">
         <div class="flex items-center justify-between text-white">
           <div class="flex items-center gap-3">
             <div class="h-10 w-10 rounded-full bg-white/15 flex items-center justify-center border border-white/25 text-white">
