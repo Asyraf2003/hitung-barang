@@ -9,17 +9,13 @@
 
   // RANGE FIX: 5
   $span = 5;
+  $rangeLabel = $mode === 'daily'
+    ? "{$span} hari"
+    : ($mode === 'weekly' ? "{$span} minggu" : "{$span} bulan");
 
-  // Anchor date biar weekly/monthly gak “lompat rasa”
-  $rawBase = $base_date ?? now($tz)->toDateString();
-  $anchor = Carbon::parse($rawBase, $tz);
-
-  if ($mode === 'weekly') $anchor = $anchor->startOfWeek(Carbon::MONDAY);
-  elseif ($mode === 'monthly') $anchor = $anchor->startOfMonth();
-  else $anchor = $anchor->startOfDay();
-
-  $base_date = $anchor->toDateString();
-  $rangeLabel = $mode === 'daily' ? "{$span} hari" : ($mode === 'weekly' ? "{$span} minggu" : "{$span} bulan");
+  // base_date: tetap hari ini (atau pakai yang datang dari query)
+  $base_date = $base_date ?? now($tz)->toDateString();
+  $d = Carbon::parse($base_date, $tz)->startOfDay();
 
   $filters = $filters ?? ['item_id'=>'','item_type_id'=>''];
   $item_options = $item_options ?? [];
@@ -29,24 +25,20 @@
   if (!empty($filters['item_type_id'])) $qsBase['item_type_id'] = $filters['item_type_id'];
   elseif (!empty($filters['item_id'])) $qsBase['item_id'] = $filters['item_id'];
 
-  // prev/next geser 5 unit
+  // prev/next geser 5 unit dari "hari ini" (atau date query)
   if ($mode === 'weekly') {
-    $prevDate = $anchor->copy()->subWeeks($span)->toDateString();
-    $nextDate = $anchor->copy()->addWeeks($span)->toDateString();
+    $prevDate = $d->copy()->subWeeks($span)->toDateString();
+    $nextDate = $d->copy()->addWeeks($span)->toDateString();
   } elseif ($mode === 'monthly') {
-    $prevDate = $anchor->copy()->subMonthsNoOverflow($span)->toDateString();
-    $nextDate = $anchor->copy()->addMonthsNoOverflow($span)->toDateString();
+    $prevDate = $d->copy()->subMonthsNoOverflow($span)->toDateString();
+    $nextDate = $d->copy()->addMonthsNoOverflow($span)->toDateString();
   } else {
-    $prevDate = $anchor->copy()->subDays($span)->toDateString();
-    $nextDate = $anchor->copy()->addDays($span)->toDateString();
+    $prevDate = $d->copy()->subDays($span)->toDateString();
+    $nextDate = $d->copy()->addDays($span)->toDateString();
   }
 
   $prevHref = '/app/home?' . http_build_query(array_merge($qsBase, ['mode' => $mode, 'date' => $prevDate]));
   $nextHref = '/app/home?' . http_build_query(array_merge($qsBase, ['mode' => $mode, 'date' => $nextDate]));
-
-  // disable next kalau sudah lewat hari ini (biar chart gak “kosong lalu auto-scale aneh”)
-  $today = now($tz)->startOfDay();
-  $nextDisabled = Carbon::parse($nextDate, $tz)->gt($today);
 @endphp
 
 <script
