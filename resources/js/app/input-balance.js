@@ -7,6 +7,38 @@ function setSubmitDisabled(btn, disabled) {
   btn.classList.toggle('pointer-events-none', d);
 }
 
+function fmtKg(x) {
+  const n = Number(x);
+  if (!Number.isFinite(n)) return '0,00';
+  return n.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function showHintBox(hintEl, msg, tone = 'muted') {
+  if (!hintEl) return;
+
+  hintEl.classList.remove('hidden');
+  hintEl.classList.remove(
+    'border-slate-200', 'bg-slate-50', 'text-slate-600',
+    'border-rose-200', 'bg-rose-50', 'text-rose-700',
+    'border-[#118EEA]/20', 'bg-[#118EEA]/10', 'text-[#118EEA]'
+  );
+
+  // base box style (kalau belum ada di blade)
+  hintEl.classList.add('rounded-xl', 'border', 'px-3', 'py-2');
+
+  if (tone === 'danger') hintEl.classList.add('border-rose-200', 'bg-rose-50', 'text-rose-700');
+  else if (tone === 'info') hintEl.classList.add('border-[#118EEA]/20', 'bg-[#118EEA]/10', 'text-[#118EEA]');
+  else hintEl.classList.add('border-slate-200', 'bg-slate-50', 'text-slate-600');
+
+  hintEl.textContent = msg;
+}
+
+function hideHintBox(hintEl) {
+  if (!hintEl) return;
+  hintEl.classList.add('hidden');
+  hintEl.textContent = '';
+}
+
 function initInputBalance(root) {
   const form = root.querySelector('#moveForm');
   if (!form) return;
@@ -38,19 +70,6 @@ function initInputBalance(root) {
     return Number.isFinite(n) ? n : 0;
   }
 
-  function fmt(x) {
-    const n = Number(x);
-    if (!Number.isFinite(n)) return '0,00';
-    return n.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
-
-  function showHint(msg, tone = 'muted') {
-    hintEl.classList.remove('hidden', 'text-slate-500', 'text-rose-700');
-    hintEl.classList.add(tone === 'danger' ? 'text-rose-700' : 'text-slate-500');
-    hintEl.textContent = msg;
-  }
-  function hideHint() { hintEl.classList.add('hidden'); hintEl.textContent = ''; }
-
   function updateSubmitState() {
     const type = currentType();
     const q = currentQty();
@@ -58,14 +77,34 @@ function initInputBalance(root) {
     let disabled = false;
 
     if (type === 'OUT') {
-      if (balanceKg === null) { disabled = true; showHint('Pilih barang/tipe dulu untuk cek saldo.'); }
-      else if (balanceKg <= 0) { disabled = true; showHint(`Saldo 0. Tidak bisa keluar.`, 'danger'); }
-      else if (q <= 0) { disabled = true; showHint('Masukkan berat dulu.'); }
-      else if (q > balanceKg) { disabled = true; showHint(`Stok tidak cukup. Tersedia ${fmt(balanceKg)} kg.`, 'danger'); }
-      else showHint(`Saldo tersedia: ${fmt(balanceKg)} kg`);
+      if (balanceKg === null) {
+        disabled = true;
+        showHintBox(hintEl, 'Pilih tipe dulu untuk cek saldo.', 'muted');
+      } else if (balanceKg <= 0) {
+        disabled = true;
+        showHintBox(hintEl, 'Saldo 0. Tidak bisa keluar.', 'danger');
+      } else if (q <= 0) {
+        disabled = true;
+        showHintBox(hintEl, `Saldo: ${fmtKg(balanceKg)} kg. Masukkan berat.`, 'info');
+      } else if (q > balanceKg) {
+        disabled = true;
+        showHintBox(hintEl, `Stok tidak cukup. Tersedia ${fmtKg(balanceKg)} kg.`, 'danger');
+      } else {
+        const remaining = Math.max(0, balanceKg - q);
+        showHintBox(
+          hintEl,
+          `Saldo: ${fmtKg(balanceKg)} kg • Sisa setelah keluar: ${fmtKg(remaining)} kg`,
+          'info'
+        );
+      }
     } else {
-      if (q <= 0) { disabled = true; showHint('Masukkan berat dulu.'); }
-      else hideHint();
+      // IN
+      if (q <= 0) {
+        disabled = true;
+        showHintBox(hintEl, 'Masukkan berat dulu.', 'muted');
+      } else {
+        hideHintBox(hintEl);
+      }
     }
 
     setSubmitDisabled(submitBtn, disabled);
@@ -74,7 +113,10 @@ function initInputBalance(root) {
   async function fetchJsonNoStore(url) {
     const u = new URL(url, window.location.origin);
     u.searchParams.set('_t', String(Date.now()));
-    const res = await fetch(u.toString(), { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+    const res = await fetch(u.toString(), {
+      headers: { 'Accept': 'application/json' },
+      cache: 'no-store',
+    });
     const data = await res.json().catch(() => null);
     if (!res.ok || !data || data.ok !== true) return null;
     return data;
@@ -82,67 +124,93 @@ function initInputBalance(root) {
 
   async function refreshBalance() {
     const mySeq = ++reqSeq;
+
     if (currentType() !== 'OUT') {
       balanceKg = null;
-      hideHint();
+      hideHintBox(hintEl);
       updateSubmitState();
       return;
     }
+
     balanceKg = null;
-    hideHint();
+    showHintBox(hintEl, 'Mengecek saldo…', 'muted');
     updateSubmitState();
 
     const useNew = !!(useNewBox && useNewBox.checked);
     const itemId = itemSelect?.value || '';
 
-    if (!useNew && typeSelect && typeSelect.value) {
-      const data = await fetchJsonNoStore(`${balanceUrl}?item_type_id=${encodeURIComponent(typeSelect.value)}`);
-      if (mySeq !== reqSeq) return;
-      if (!data) return;
+    try {
+      // OUT + pilih tipe existing
+      if (!useNew && typeSelect && typeSelect.value) {
+        const data = await fetchJsonNoStore(`${balanceUrl}?item_type_id=${encodeURIComponent(typeSelect.value)}`);
+        if (mySeq !== reqSeq) return;
 
-      balanceKg = Number(data.balance_kg) || 0;
-      showHint(`Saldo tersedia: ${fmt(balanceKg)} kg`);
+        if (!data) {
+          showHintBox(hintEl, 'Gagal cek saldo. Coba lagi.', 'danger');
+          updateSubmitState();
+          return;
+        }
+
+        balanceKg = Number(data.balance_kg) || 0;
+        updateSubmitState();
+        return;
+      }
+
+      // OUT + tipe baru (diameter) + pilih item
+      if (useNew && itemId && diameterInput && diameterInput.value.trim() !== '') {
+        const data = await fetchJsonNoStore(
+          `${balanceUrl}?item_id=${encodeURIComponent(itemId)}&diameter_mm=${encodeURIComponent(diameterInput.value.trim())}`
+        );
+        if (mySeq !== reqSeq) return;
+
+        if (!data) {
+          showHintBox(hintEl, 'Gagal cek saldo. Coba lagi.', 'danger');
+          updateSubmitState();
+          return;
+        }
+
+        balanceKg = Number(data.balance_kg) || 0;
+        updateSubmitState();
+        return;
+      }
+
+      // OUT tapi belum lengkap pilihannya
+      balanceKg = null;
       updateSubmitState();
-      return;
-    }
-
-    if (useNew && itemId && diameterInput && diameterInput.value.trim() !== '') {
-      const data = await fetchJsonNoStore(
-        `${balanceUrl}?item_id=${encodeURIComponent(itemId)}&diameter_mm=${encodeURIComponent(diameterInput.value.trim())}`
-      );
+    } catch {
       if (mySeq !== reqSeq) return;
-      if (!data) return;
-
-      balanceKg = Number(data.balance_kg) || 0;
-      showHint(`Saldo tersedia: ${fmt(balanceKg)} kg`);
+      showHintBox(hintEl, 'Gagal cek saldo (network).', 'danger');
       updateSubmitState();
-      return;
     }
   }
 
   // events
   itemSelect?.addEventListener('change', refreshBalance);
-  typeSelect?.addEventListener('change', refreshBalance);
-    let diamT = null;
+
+  // kalau pilih tipe existing: auto sync item dari data-item-id (kalau ada)
+  typeSelect?.addEventListener('change', () => {
+    const opt = typeSelect.options[typeSelect.selectedIndex];
+    const itemId = opt?.dataset?.itemId;
+    if (itemId && itemSelect && itemSelect.value !== itemId) itemSelect.value = itemId;
+    refreshBalance();
+  });
+
+  let diamT = null;
   diameterInput?.addEventListener('input', () => {
     clearTimeout(diamT);
     diamT = setTimeout(refreshBalance, 300);
   });
+
   useNewBox?.addEventListener('change', refreshBalance);
 
   qtyInput?.addEventListener('input', () => {
-    if (currentType() === 'OUT' && balanceKg !== null) {
-      const q = currentQty();
-      if (q > balanceKg) showHint(`Stok tidak cukup. Tersedia ${fmt(balanceKg)} kg.`, 'danger');
-      else showHint(`Saldo tersedia: ${fmt(balanceKg)} kg`);
-    }
     updateSubmitState();
   });
 
   form.querySelectorAll('input[name="type"]').forEach((el) => {
     el.addEventListener('change', () => {
       updateSubmitState();
-      if (currentType() === 'OUT') refreshBalance();
+      refreshBalance();
     });
   });
 

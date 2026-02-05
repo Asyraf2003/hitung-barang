@@ -33,14 +33,24 @@
       @csrf
 
       <div class="flex gap-2">
-        <label class="flex-1 cursor-pointer">
-          <input type="radio" name="type" value="IN" class="hidden" {{ $type==='IN'?'checked':'' }}>
-          <div data-move-type-box="IN" class="rounded-xl border px-3 py-2 text-center font-semibold">Masuk</div>
+        <label class="flex-1">
+          <input type="radio" name="type" value="IN" class="peer sr-only" {{ $type==='IN'?'checked':'' }}>
+          <div
+            class="rounded-xl border px-3 py-2 text-center font-semibold transition
+                  border-slate-200 text-slate-700
+                  peer-checked:border-[#118EEA] peer-checked:bg-[#118EEA]/10 peer-checked:text-[#118EEA]">
+            Masuk
+          </div>
         </label>
 
-        <label class="flex-1 cursor-pointer">
-          <input type="radio" name="type" value="OUT" class="hidden" {{ $type==='OUT'?'checked':'' }}>
-          <div data-move-type-box="OUT" class="rounded-xl border px-3 py-2 text-center font-semibold">Keluar</div>
+        <label class="flex-1">
+          <input type="radio" name="type" value="OUT" class="peer sr-only" {{ $type==='OUT'?'checked':'' }}>
+          <div
+            class="rounded-xl border px-3 py-2 text-center font-semibold transition
+                  border-slate-200 text-slate-700
+                  peer-checked:border-rose-300 peer-checked:bg-rose-50 peer-checked:text-rose-700">
+            Keluar
+          </div>
         </label>
       </div>
 
@@ -134,13 +144,17 @@
       </div>
 
       <div>
-        <label class="text-sm text-slate-600">Berat (kg)</label>
-        <input id="qtyInput" name="qty_kg" value="{{ old('qty_kg') }}" inputmode="decimal"
-          class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-3 py-2 outline-none
-                 focus:border-[#118EEA] focus:ring-2 focus:ring-[#118EEA]/20"
-          placeholder="contoh: 0.30 atau 1.50" required>
+        <label class="text-sm text-slate-600">Berat</label>
 
-        <div id="balanceHint" class="hidden text-xs mt-2"></div>
+        <div class="relative mt-1">
+          <input id="qtyInput" name="qty_kg" value="{{ old('qty_kg') }}" inputmode="decimal"
+            class="w-full rounded-xl bg-white border border-slate-200 px-3 py-2 pr-12 outline-none
+                  focus:border-[#118EEA] focus:ring-2 focus:ring-[#118EEA]/20"
+            placeholder="contoh: 0,30" required>
+          <div class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">kg</div>
+        </div>
+
+        <div id="balanceHint" class="hidden mt-2 rounded-xl border px-3 py-2 text-xs" role="status" aria-live="polite"></div>
         @error('qty_kg') <div class="mt-1 text-xs text-red-600">{{ $message }}</div> @enderror
       </div>
 
@@ -153,14 +167,20 @@
         @error('note') <div class="mt-1 text-xs text-red-600">{{ $message }}</div> @enderror
       </div>
 
-      <button
-        id="submitMove"
-        type="submit"
-        class="w-full rounded-xl bg-[#118EEA] py-2.5 font-semibold text-white shadow-sm active:scale-[0.99]
-              disabled:bg-[#118EEA]/40 disabled:text-white/80 disabled:shadow-none"
-      >
-        Simpan
-      </button>
+      <div class="sticky bottom-0 -mx-4 mt-4 border-t border-slate-200 bg-white/90 backdrop-blur p-4">
+        <button
+          id="submitMove"
+          type="submit"
+          class="w-full rounded-xl bg-[#118EEA] py-2.5 font-semibold text-white shadow-sm active:scale-[0.99]
+                disabled:bg-[#118EEA]/40 disabled:text-white/80 disabled:shadow-none"
+        >
+          Simpan
+        </button>
+
+        <div id="submitSubtext" class="mt-2 text-center text-[11px] text-slate-500">
+          Pastikan barang/tipe & berat sudah benar.
+        </div>
+      </div>
     </form>
   </div>
 </div>
