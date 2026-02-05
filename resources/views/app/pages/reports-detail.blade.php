@@ -1,38 +1,81 @@
 @php
-  $item_type = $item_type ?? ['id'=>0,'barang'=>'-','tipe'=>'-'];
-  $mode = $mode ?? 'daily';
-  $base_date = $base_date ?? now()->toDateString();
+  $itemTypeId = (int)($item_type['id'] ?? 0); // ini item_type_id
+  $itemId = (int)($item_type['item_id'] ?? request('item_id') ?? 0); // fallback dari query
+  $canOut = ((float)($totals['balance_end_kg'] ?? 0)) > 0;
+  $from = request('from');
+  $backHref = $from === 'stock'
+    ? '/app/stock'
+    : "/app/reports?mode={$mode}&date={$base_date}";
 @endphp
 
 <div class="space-y-3">
   <div class="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">
-    <a data-pjax href="/app/reports?mode={{ $mode }}&date={{ $base_date }}"
-       class="text-xs font-semibold text-[#118EEA]">‹ Kembali</a>
+    {{-- Baris 1: Navigasi Kembali --}}
+    <a data-pjax href="{{ $backHref }}" class="inline-flex items-center gap-1 text-[11px] font-bold text-[#118EEA] uppercase tracking-wider active:opacity-50">
+        ‹ Kembali
+    </a>
 
-    <div class="mt-2 text-base font-semibold">
-      Detail {{ $item_type['barang'] }} • {{ $item_type['tipe'] }}
-    </div>
-    <div class="text-sm text-slate-500">
-      Periode: {{ $period_label ?? $base_date }}
+    {{-- Baris 2: Header Utama & Aksi --}}
+    <div class="mt-2 flex items-center justify-between gap-3">
+      <div class="min-w-0">
+          <div class="text-base font-bold text-slate-800 leading-tight">
+              {{ $item_type['barang'] }}
+          </div>
+          <div class="mt-0.5 text-sm text-slate-500 leading-tight">
+              {{ $item_type['tipe'] }}
+          </div>
+      </div>
+
+      {{-- Tombol Bulat Aksi (Sinkron dengan gaya Cetak) --}}
+      <div class="flex items-center gap-2 shrink-0">
+        {{-- Tombol Tambah (+) --}}
+        <a data-pjax
+          href="/app/input?type=IN&item_type_id={{ $itemTypeId }}&item_id={{ $itemId }}"
+          class="flex items-center justify-center rounded-full bg-[#118EEA] text-white shadow-sm active:scale-90 transition-all"
+          style="width: 42px; height: 42px; min-width: 42px; min-height: 42px;">
+          <span style="line-height: 0; font-size: 22px; font-weight: bold;">+</span>
+        </a>
+
+        {{-- Tombol Kurangi (-) - Samakan gaya dengan (+) jika stok ada --}}
+        <a data-pjax
+          href="{{ $canOut ? "/app/input?type=OUT&item_type_id={$itemTypeId}&item_id={$itemId}" : '#' }}"
+          class="flex items-center justify-center rounded-full transition-all 
+                  {{ $canOut 
+                    ? 'bg-[#118EEA] text-white shadow-sm active:scale-90' 
+                    : 'bg-rose-600/20 text-rose-600/40 backdrop-blur-[2px] cursor-not-allowed pointer-events-none border border-rose-200/30' }}"
+          style="width: 42px; height: 42px; min-width: 42px; min-height: 42px;">
+          <span style="line-height: 0; font-size: 24px; font-weight: bold; margin-top: -2px;">-</span>
+        </a>
+      </div>
     </div>
 
-    <div class="mt-3 grid grid-cols-3 gap-2 text-center">
-      <div class="rounded-xl bg-[#118EEA]/10 border border-[#118EEA]/20 p-2">
-        <div class="text-[11px] text-slate-600">Masuk</div>
-        <div class="text-sm font-semibold text-[#118EEA]">
-          {{ number_format((float)($totals['in_kg'] ?? 0), 2, ',', '.') }} kg
+    {{-- Baris 3: Info Periode --}}
+    <div class="mt-4 pt-3 border-t border-slate-50 text-center">
+        <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
+            Periode: {{ $period_label ?? $base_date }}
+        </div>
+    </div>
+
+    {{-- Baris 4: Ringkasan Angka (Grid 3 Kolom) --}}
+    <div class="mt-3 grid grid-cols-3 gap-2">
+      <div class="rounded-2xl bg-[#118EEA]/10 border border-[#118EEA]/20 p-2.5 flex flex-col items-center justify-center text-center">
+        <div class="text-[10px] text-slate-500 leading-tight uppercase tracking-wide">Masuk</div>
+        <div class="mt-1 text-sm font-bold text-[#118EEA] leading-none">
+          {{ number_format((float)($totals['in_kg'] ?? 0), 2, ',', '.') }}
         </div>
       </div>
-      <div class="rounded-xl bg-rose-50 border border-rose-200 p-2">
-        <div class="text-[11px] text-slate-600">Keluar</div>
-        <div class="text-sm font-semibold text-rose-700">
-          {{ number_format((float)($totals['out_kg'] ?? 0), 2, ',', '.') }} kg
+
+      <div class="rounded-2xl bg-rose-50 border border-rose-200 p-2.5 flex flex-col items-center justify-center text-center">
+        <div class="text-[10px] text-slate-500 leading-tight uppercase tracking-wide">Keluar</div>
+        <div class="mt-1 text-sm font-bold text-rose-700 leading-none">
+          {{ number_format((float)($totals['out_kg'] ?? 0), 2, ',', '.') }}
         </div>
       </div>
-      <div class="rounded-xl bg-white border border-slate-200 p-2">
-        <div class="text-[11px] text-slate-600">Sisa (akhir)</div>
-        <div class="text-sm font-semibold">
-          {{ number_format((float)($totals['balance_end_kg'] ?? 0), 2, ',', '.') }} kg
+
+      <div class="rounded-2xl border p-2.5 flex flex-col items-center justify-center text-center {{ (float)($totals['balance_end_kg'] ?? 0) >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200' }}">
+        <div class="text-[10px] text-slate-500 leading-tight uppercase tracking-wide">Sisa</div>
+        <div class="mt-1 text-sm font-bold leading-none {{ (float)($totals['balance_end_kg'] ?? 0) >= 0 ? 'text-emerald-700' : 'text-rose-700' }}">
+          {{ number_format((float)($totals['balance_end_kg'] ?? 0), 2, ',', '.') }}
         </div>
       </div>
     </div>
