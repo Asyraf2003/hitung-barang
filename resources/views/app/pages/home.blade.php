@@ -129,16 +129,12 @@
 
     <div class="mt-3 grid grid-cols-2 gap-2 text-xs font-semibold">
       <a data-pjax href="{{ $prevHref }}"
-        class="rounded-xl border border-slate-200 px-3 py-2 text-center text-slate-700">
+        class="rounded-xl border border-slate-200 px-3 py-2 text-center text-slate-700 active:bg-slate-50">
         ‹ Sebelumnya
       </a>
 
-      <a data-pjax
-        href="{{ $nextDisabled ? '#' : $nextHref }}"
-        aria-disabled="{{ $nextDisabled ? 'true' : 'false' }}"
-        tabindex="{{ $nextDisabled ? '-1' : '0' }}"
-        class="rounded-xl border border-slate-200 px-3 py-2 text-center
-          {{ $nextDisabled ? 'text-slate-400 bg-slate-50 pointer-events-none' : 'text-slate-700' }}">
+      <a data-pjax href="{{ $nextHref }}"
+        class="rounded-xl border border-slate-200 px-3 py-2 text-center text-slate-700 active:bg-slate-50">
         Selanjutnya ›
       </a>
     </div>
