@@ -38,10 +38,6 @@
                 </div>
               </div>
             </div>
-
-            <div class="shrink-0 text-slate-400 text-xl leading-none">
-              ›
-            </div>
           </div>
         </a>
       @endforeach
