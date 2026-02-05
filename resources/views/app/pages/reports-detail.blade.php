@@ -8,6 +8,12 @@
     : "/app/reports?mode={$mode}&date={$base_date}";
 @endphp
 
+<div class="hidden"
+     data-page-header
+     data-title="Detail barang"
+     data-meta="Semua detail transaksi">
+</div>
+
 <div class="space-y-3">
   <div class="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">
     {{-- Baris 1: Navigasi Kembali --}}

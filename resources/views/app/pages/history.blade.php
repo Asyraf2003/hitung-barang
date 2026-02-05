@@ -4,6 +4,12 @@
   $showVoided = ($filters['show_voided'] ?? '') === '1';
 @endphp
 
+<div class="hidden"
+     data-page-header
+     data-title="Riwayat"
+     data-meta="Semua detail transaksi">
+</div>
+
 <div class="space-y-3">
   <div class="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">
     <div class="flex items-center justify-between gap-3">

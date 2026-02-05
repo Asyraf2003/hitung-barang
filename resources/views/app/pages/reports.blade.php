@@ -4,6 +4,12 @@
   $period_label = $period_label ?? ($date ?? $base_date);
 @endphp
 
+<div class="hidden"
+     data-page-header
+     data-title="Laporan"
+     data-meta="Rekap stok dan transaksi">
+</div>
+
 <div class="space-y-3">
   <div class="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">
     <div class="flex items-center justify-between gap-3">

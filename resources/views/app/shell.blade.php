@@ -8,28 +8,7 @@
   <meta name="csrf-token" content="{{ csrf_token() }}">
 
   <title>Arbicon | Dashboard Manajemen Stok & Inventori</title>
-  <meta name="description" content="Arbicon - Solusi manajemen stok dan laporan inventori praktis. Pantau riwayat transaksi dan kelola input data barang dengan mudah dalam satu aplikasi.">
-  
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Arbicon",
-    "operatingSystem": "Web",
-    "applicationCategory": "BusinessApplication",
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "5",
-      "reviewCount": "1"
-    },
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "IDR"
-    }
-  }
-  </script>
-  
+  <meta name="description" content="Arbicon - Solusi manajemen stok dan laporan inventori praktis. Pantau riwayat transaksi dan kelola input data barang dengan mudah dalam satu aplikasi.">  
   <link rel="manifest" href="/manifest.webmanifest">
   
   @vite(['resources/css/app.css','resources/js/app.js'])
@@ -50,19 +29,27 @@
   <div id="app" class="min-h-dvh flex flex-col">
     {{-- Top bar (DANA-ish) --}}
     <header class="sticky top-0 z-20 overflow-hidden">
-      <div class="bg-[#118EEA] px-4 pt-3 pb-5 rounded-b-[30px] shadow-lg">
+      <div class="bg-[#118EEA] px-4 pt-8 pb-5 rounded-b-[30px] shadow-lg">
         <div class="flex items-center justify-between text-white">
           <div class="flex items-center gap-3">
             <div class="h-10 w-10 rounded-full bg-white/15 flex items-center justify-center border border-white/25 text-white">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" class="opacity-95">
-                <path d="M12 2l3 7 7 3-7 3-3 7-3-7-7-3 7-3 3-7z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
-                <path d="M5 21c2.4-1.4 4.6-1.4 7 0 2.4 1.4 4.6 1.4 7 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <svg viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-8 h-8">
+                <rect width="512" height="512" rx="64" fill="transparent"/>
+                
+                <g transform="translate(15, 15) scale(0.95)">
+                  <rect x="80" y="220" width="70" height="160" rx="15" fill="#4CAF50"/>
+                  <rect x="180" y="260" width="70" height="120" rx="15" fill="#FFC107"/>
+                  <rect x="280" y="200" width="70" height="180" rx="15" fill="#FFB300"/>
+                  <rect x="380" y="140" width="70" height="240" rx="15" fill="#E53935"/>
+                  <path d="M80 180C150 140 250 180 430 80" stroke="#1E88E5" stroke-width="25" stroke-linecap="round"/>
+                  <path d="M435 78L400 85M435 78L428 115" stroke="#1E88E5" stroke-width="25" stroke-linecap="round" stroke-linejoin="round"/>
+                </g>
               </svg>
             </div>
 
-            <div>
-              <div class="text-xxl font-bold" id="greeting">Selamat ...</div>
-              <div class="font-bold text-xl leading-tight">Pak Bos</div>
+            <div class="min-w-0">
+              <div class="font-bold text-xl leading-tight truncate" id="headerTitle">Dashboard</div>
+              <div class="mt-1 text-sm text-white/80 truncate" id="headerMeta">Ringkasan hari ini</div>
             </div>
           </div>
 

@@ -48,6 +48,12 @@
   data-mode="{{ $mode }}"
 >@json($charts)</script>
 
+<div class="hidden"
+     data-page-header
+     data-title="Dashboard"
+     data-meta="{{ e(date('d M Y')) }}">
+</div>
+
 <div class="space-y-3">
   <div class="grid grid-cols-2 gap-3">
     <div class="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">

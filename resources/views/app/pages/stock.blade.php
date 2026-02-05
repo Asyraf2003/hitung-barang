@@ -1,8 +1,10 @@
+<div class="hidden"
+     data-page-header
+     data-title="Stok"
+     data-meta="Sisa stok per kg">
+</div>
+
 <div class="space-y-3">
-  <div class="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">
-    <div class="text-base font-semibold">Stok</div>
-    <div class="mt-1 text-sm text-slate-500">Sisa stok per kg.</div>
-  </div>
 
   @if(empty($items) || count($items) === 0)
     <div class="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm text-sm text-slate-500">
