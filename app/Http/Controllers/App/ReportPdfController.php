@@ -68,7 +68,7 @@ final class ReportPdfController extends Controller
             ->selectRaw(
                 "(
                 COALESCE(SUM(CASE
-                    WHEN inventory_movements.type IN ('IN','ADJUST')
+                    WHEN inventory_movements.type = 'IN'
                     AND inventory_movements.occurred_at <= ?
                     AND JSON_EXTRACT(inventory_movements.meta, '$.voided_at') IS NULL
                     THEN inventory_movements.qty_kg ELSE 0 END),0)

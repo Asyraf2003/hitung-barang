@@ -225,6 +225,8 @@ function initHomeCharts(root) {
       },
     }));
   }
+
+  setupChartDownload(root); 
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -237,3 +239,26 @@ document.addEventListener('pjax:loaded', (e) => {
   if (!url || !root) return;
   if (url.startsWith('/app/home')) initHomeCharts(root);
 });
+
+function setupChartDownload(root) {
+  const btn = (root?.querySelector?.('#btnChartDownload')) || document.getElementById('btnChartDownload');
+  const canvas = (root?.querySelector?.('#chartInOut')) || document.getElementById('chartInOut');
+  if (!btn || !canvas) return;
+
+  // biar gak double-bind kalau init dipanggil berkali-kali
+  if (btn.dataset.bound === '1') return;
+  btn.dataset.bound = '1';
+
+  const metaEl =
+    (root?.querySelector?.('#homeChartData')) || document.getElementById('homeChartData');
+  const baseDate = metaEl?.dataset?.baseDate || '';
+
+  btn.addEventListener('click', () => {
+    // pastiin canvas sudah ada isinya
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = `grafik-inout-${baseDate || 'tanggal'}.png`;
+    a.click();
+  });
+}
+

@@ -36,7 +36,7 @@ final class InventoryService
             $base->where('occurred_at', '<=', $at);
         }
 
-        $inAdj = (float) (clone $base)->whereIn('type', [InventoryMovement::TYPE_IN, InventoryMovement::TYPE_ADJUST])->sum('qty_kg');
+        $inAdj = (float) (clone $base)->where('type', InventoryMovement::TYPE_IN)->sum('qty_kg');
         $out   = (float) (clone $base)->where('type', InventoryMovement::TYPE_OUT)->sum('qty_kg');
 
         return round($inAdj - $out, 2);
@@ -70,7 +70,7 @@ final class InventoryService
         ?string $note = null,
         array $meta = []
     ): InventoryMovement {
-        if (!in_array($type, [InventoryMovement::TYPE_IN, InventoryMovement::TYPE_OUT, InventoryMovement::TYPE_ADJUST], true)) {
+        if (!in_array($type, [InventoryMovement::TYPE_IN, InventoryMovement::TYPE_OUT], true)) {
             throw new InvalidArgumentException('type tidak valid');
         }
         if ($qtyKg <= 0) {
@@ -86,8 +86,8 @@ final class InventoryService
             $current = (float) $t->balance_kg;
             $delta = (float) $qtyKg;
 
-            // IN dan ADJUST dianggap menambah saldo
-            if ($type === InventoryMovement::TYPE_IN || $type === InventoryMovement::TYPE_ADJUST) {
+            // IN menambah saldo
+            if ($type === InventoryMovement::TYPE_IN) {
                 $newBal = $current + $delta;
             } else { // OUT
                 if ($current < $delta) {
@@ -135,7 +135,7 @@ final class InventoryService
             $qty = (float) $m->qty_kg;
 
             // Balikkan saldo (Reversal)
-            if ($m->type === InventoryMovement::TYPE_IN || $m->type === InventoryMovement::TYPE_ADJUST) {
+            if ($m->type === InventoryMovement::TYPE_IN) {
                 // Jika tadinya masuk, maka sekarang dikurangi
                 $newBal = $currentBal - $qty;
             } else {
@@ -182,7 +182,7 @@ final class InventoryService
             $diff = $newQty - $oldQty;
 
             // Impact saldo berdasarkan tipe movement (sama seperti logic kamu sekarang)
-            if ($m->type === InventoryMovement::TYPE_IN || $m->type === InventoryMovement::TYPE_ADJUST) {
+            if ($m->type === InventoryMovement::TYPE_IN) {
                 $newBal = $currentBal + $diff;
             } else { // OUT
                 $newBal = $currentBal - $diff;

@@ -9,7 +9,6 @@ final class InventoryMovement extends Model
 {
     public const TYPE_IN = 'IN';
     public const TYPE_OUT = 'OUT';
-    public const TYPE_ADJUST = 'ADJUST';
 
     protected $fillable = [
         'item_type_id',

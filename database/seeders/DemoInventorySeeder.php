@@ -127,25 +127,6 @@ class DemoInventorySeeder extends Seeder
                     $balance[$typeId] -= $qty;
                 }
             }
-
-            // ADJUST: 5% hari, 0.01–0.08 kg
-            if (random_int(1, 100) <= 5) {
-                $typeId = $typeIds[array_rand($typeIds)];
-                $qty = random_int(1, 8) / 100;
-
-                $at = $day->copy()->setTime(random_int(17, 21), random_int(0, 59), random_int(0, 59));
-
-                InventoryMovement::query()->create([
-                    'item_type_id' => $typeId,
-                    'type' => InventoryMovement::TYPE_ADJUST,
-                    'qty_kg' => number_format($qty, 2, '.', ''),
-                    'occurred_at' => $at,
-                    'note' => 'Penyesuaian',
-                    'meta' => null,
-                ]);
-
-                $balance[$typeId] += $qty;
-            }
         }
 
         // Sinkronkan saldo tersimpan di item_types (realtime balance)

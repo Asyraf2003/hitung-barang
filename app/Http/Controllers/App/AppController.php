@@ -296,7 +296,7 @@ final class AppController extends Controller
                 $query->whereRaw("JSON_EXTRACT(meta, '$.voided_at') IS NULL");
             }
 
-            if (in_array($type, ['IN','OUT','ADJUST'], true)) {
+            if (in_array($type, ['IN','OUT'], true)) {
                 $query->where('type', $type);
             } else {
                 $type = '';
@@ -442,7 +442,7 @@ final class AppController extends Controller
                 ->selectRaw(
                     "(
                     COALESCE(SUM(CASE
-                        WHEN inventory_movements.type IN ('IN','ADJUST')
+                        WHEN inventory_movements.type = 'IN'
                         AND inventory_movements.occurred_at <= ?
                         AND JSON_EXTRACT(inventory_movements.meta, '$.voided_at') IS NULL
                         THEN inventory_movements.qty_kg ELSE 0 END),0)
@@ -545,7 +545,7 @@ final class AppController extends Controller
                 ->where('item_type_id', $typeId)
                 ->where('occurred_at', '<=', $endUtc)
                 ->selectRaw("(
-                    COALESCE(SUM(CASE WHEN type IN ('IN','ADJUST') THEN qty_kg ELSE 0 END),0)
+                    COALESCE(SUM(CASE WHEN type = 'IN' THEN qty_kg ELSE 0 END),0)
                     -
                     COALESCE(SUM(CASE WHEN type = 'OUT' THEN qty_kg ELSE 0 END),0)
                 ) AS bal")

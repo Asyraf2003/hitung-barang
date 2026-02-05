@@ -147,7 +147,7 @@
         @php
           $isVoided = !empty($r['is_voided']);
           $isIn = ($r['type'] ?? '') === 'IN';
-          $typeLabel = $isIn ? 'Masuk' : (($r['type'] ?? '') === 'OUT' ? 'Keluar' : 'Adjust');
+          $typeLabel = ($r['type'] ?? '') === 'IN' ? 'Masuk' : 'Keluar';
 
           $badgeClass = $isIn ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                       : (($r['type'] ?? '')==='OUT' ? 'bg-rose-50 text-rose-700 border-rose-200'

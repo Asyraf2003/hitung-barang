@@ -14,7 +14,7 @@ return new class extends Migration {
                 ->constrained('item_types')
                 ->cascadeOnDelete();
 
-            $table->enum('type', ['IN', 'OUT', 'ADJUST'])->index();
+            $table->enum('type', ['IN', 'OUT'])->index();
 
             // Semua qty dalam kg
             $table->decimal('qty_kg', 14, 2);
