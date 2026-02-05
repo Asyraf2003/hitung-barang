@@ -6,14 +6,69 @@
 
 <div class="space-y-3">
   <div class="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">
-    <div class="text-base font-semibold">Riwayat</div>
-    <div class="mt-1 text-sm text-slate-500">Cari & filter transaksi.</div>
+    <div class="flex items-center justify-between gap-3">
+      <div class="min-w-0">
+        <div class="flex items-center gap-2">
+          <div class="text-base font-semibold text-slate-800">Riwayat</div>
 
-    <form method="GET" action="/app/history" data-pjax-form class="mt-4 space-y-3">
+          @php
+            $activeChips = [];
+
+            if(!empty($filters['type'])) {
+              $activeChips[] = [
+                'label' => $filters['type']==='IN' ? 'Masuk' : 'Keluar',
+              ];
+            }
+
+            if(!empty($filters['from']) || !empty($filters['to'])) {
+              $from = $filters['from'] ?: '...';
+              $to = $filters['to'] ?: '...';
+              $activeChips[] = ['label' => "{$from} → {$to}"];
+            }
+
+            if(!empty($filters['item_type_id'])) {
+              $activeChips[] = ['label' => "Tipe #".$filters['item_type_id']];
+            }
+
+            if(!empty($filters['q'])) {
+              $q = $filters['q'];
+              if (mb_strlen($q) > 18) $q = mb_substr($q, 0, 18).'…';
+              $activeChips[] = ['label' => "Cari: ".$q];
+            }
+
+            if($showVoided) $activeChips[] = ['label' => "Termasuk dibatalkan"];
+          @endphp
+
+          @if(empty($activeChips))
+            <span class="text-xs text-slate-400">Tanpa filter</span>
+          @endif
+        </div>
+
+        @if(!empty($activeChips))
+          <div class="mt-2 flex flex-wrap gap-1.5">
+            @foreach($activeChips as $c)
+              <span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+                {{ $c['label'] }}
+              </span>
+            @endforeach
+          </div>
+        @else
+          <div class="mt-1 text-sm text-slate-500">Cari & filter transaksi.</div>
+        @endif
+      </div>
+
+      <button type="button" id="toggleHistoryFilter"
+        class="shrink-0 rounded-full bg-[#118EEA] px-5 py-2 text-sm font-bold text-white shadow-sm active:scale-95 transition-all flex items-center">
+        filter
+      </button>
+    </div>
+
+    <form method="GET" action="/app/history" data-pjax-form class="mt-4 space-y-3 hidden" id="historyFilterBody" class="mt-4 space-y-3 hidden pt-4 border-t border-slate-100">
+
       <div>
         <input name="q" value="{{ $filters['q'] }}" placeholder="Cari (catatan / barang / tipe)"
           class="w-full rounded-xl bg-white border border-slate-200 px-3 py-2 outline-none
-                 focus:border-[#118EEA] focus:ring-2 focus:ring-[#118EEA]/20">
+                focus:border-[#118EEA] focus:ring-2 focus:ring-[#118EEA]/20">
       </div>
 
       <div class="grid grid-cols-2 gap-2">
@@ -27,7 +82,7 @@
           <label class="text-xs text-slate-500">Sampai</label>
           <input type="date" name="to" value="{{ $filters['to'] }}"
             class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-3 py-2 outline-none
-                   focus:border-[#118EEA] focus:ring-2 focus:ring-[#118EEA]/20">
+                  focus:border-[#118EEA] focus:ring-2 focus:ring-[#118EEA]/20">
         </div>
       </div>
 
@@ -36,11 +91,10 @@
           <label class="text-xs text-slate-500">Tipe Transaksi</label>
           <select name="type"
             class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-3 py-2 outline-none
-                   focus:border-[#118EEA] focus:ring-2 focus:ring-[#118EEA]/20">
+                  focus:border-[#118EEA] focus:ring-2 focus:ring-[#118EEA]/20">
             <option value="">Semua</option>
             <option value="IN" {{ $filters['type']==='IN'?'selected':'' }}>Masuk</option>
-            <option value="OUT" {{ $filters['type']==='OUT'?'selected':'' }}>Keluar</option>
-            <option value="ADJUST" {{ $filters['type']==='ADJUST'?'selected':'' }}>Adjust</option>
+            <option value="OUT" {{ $filters['type']==='OUT'?'selected':'' }}>Keluar</option>\
           </select>
         </div>
 
@@ -48,7 +102,7 @@
           <label class="text-xs text-slate-500">Tipe Barang</label>
           <select name="item_type_id"
             class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-3 py-2 outline-none
-                   focus:border-[#118EEA] focus:ring-2 focus:ring-[#118EEA]/20">
+                  focus:border-[#118EEA] focus:ring-2 focus:ring-[#118EEA]/20">
             <option value="">Semua</option>
             @foreach($type_options as $opt)
               <option value="{{ $opt['id'] }}" {{ (string)$filters['item_type_id']===(string)$opt['id']?'selected':'' }}>

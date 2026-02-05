@@ -9,3 +9,4 @@ import './app/menu';
 import './app/nav-active';
 import './app/splash';
 import './app/history-actions';
+import './app/history-filter-ui';
