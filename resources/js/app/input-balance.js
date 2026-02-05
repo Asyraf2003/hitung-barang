@@ -1,8 +1,10 @@
 function setSubmitDisabled(btn, disabled) {
   if (!btn) return;
-  btn.disabled = !!disabled;
-  btn.classList.toggle('opacity-50', !!disabled);
-  btn.classList.toggle('pointer-events-none', !!disabled);
+  const d = !!disabled;
+  btn.disabled = d;
+  btn.setAttribute('aria-disabled', d ? 'true' : 'false');
+  btn.classList.toggle('opacity-50', d);
+  btn.classList.toggle('pointer-events-none', d);
 }
 
 function initInputBalance(root) {
@@ -56,12 +58,14 @@ function initInputBalance(root) {
     let disabled = false;
 
     if (type === 'OUT') {
-      if (balanceKg === null) disabled = true;
-      else if (balanceKg <= 0) disabled = true;
-      else if (q > 0 && q > balanceKg) disabled = true;
-      else if (q <= 0) disabled = true;
+      if (balanceKg === null) { disabled = true; showHint('Pilih barang/tipe dulu untuk cek saldo.'); }
+      else if (balanceKg <= 0) { disabled = true; showHint(`Saldo 0. Tidak bisa keluar.`, 'danger'); }
+      else if (q <= 0) { disabled = true; showHint('Masukkan berat dulu.'); }
+      else if (q > balanceKg) { disabled = true; showHint(`Stok tidak cukup. Tersedia ${fmt(balanceKg)} kg.`, 'danger'); }
+      else showHint(`Saldo tersedia: ${fmt(balanceKg)} kg`);
     } else {
-      if (q <= 0) disabled = true;
+      if (q <= 0) { disabled = true; showHint('Masukkan berat dulu.'); }
+      else hideHint();
     }
 
     setSubmitDisabled(submitBtn, disabled);

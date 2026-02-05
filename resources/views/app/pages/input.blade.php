@@ -153,7 +153,12 @@
         @error('note') <div class="mt-1 text-xs text-red-600">{{ $message }}</div> @enderror
       </div>
 
-      <button id="submitMove" class="w-full rounded-xl bg-[#118EEA] py-2.5 font-semibold text-white shadow-sm active:scale-[0.99]">
+      <button
+        id="submitMove"
+        type="submit"
+        class="w-full rounded-xl bg-[#118EEA] py-2.5 font-semibold text-white shadow-sm active:scale-[0.99]
+              disabled:bg-[#118EEA]/40 disabled:text-white/80 disabled:shadow-none"
+      >
         Simpan
       </button>
     </form>

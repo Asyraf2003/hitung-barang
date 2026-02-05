@@ -21,7 +21,7 @@
           <label class="text-xs text-slate-500">Dari</label>
           <input type="date" name="from" value="{{ $filters['from'] }}"
             class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-3 py-2 outline-none
-                   focus:border-[#118EEA] focus:ring-2 focus:ring-[#118EEA]/20">
+                  focus:border-[#118EEA] focus:ring-2 focus:ring-[#118EEA]/20">
         </div>
         <div>
           <label class="text-xs text-slate-500">Sampai</label>

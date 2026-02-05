@@ -347,7 +347,7 @@ final class AppController extends Controller
                     'id' => $m->id,
                     'type' => $m->type,
                     'qty_kg' => (float) $m->qty_kg,
-                    'occurred_at' => $m->occurred_at?->copy()->setTimezone($tz)->format('Y-m-d H:i'),
+                    'occurred_at' => $m->occurred_at?->copy()->setTimezone($tz)->format('d/m/Y H:i'),
                     'note' => $m->note,
                     'barang' => (string) ($m->itemType?->item?->name ?? ''),
                     'tipe' => (string) ($m->itemType?->label ?? ''),
@@ -525,7 +525,7 @@ final class AppController extends Controller
                     'id' => $m->id,
                     'type' => $m->type,
                     'qty_kg' => (float) $m->qty_kg,
-                    'occurred_at' => $m->occurred_at?->copy()->setTimezone($uiTz)->format('Y-m-d H:i'),
+                    'occurred_at' => $m->occurred_at?->copy()->setTimezone($uiTz)->format('d/m/Y H:i'),
                     'note' => $m->note,
                 ]);
 

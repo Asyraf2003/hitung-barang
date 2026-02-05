@@ -98,7 +98,7 @@ final class ReportPdfController extends Controller
         $data = [
             'title' => 'Laporan '.strtoupper($mode),
             'period_text' => $periodText,
-            'generated_at' => now($uiTz)->format('Y-m-d H:i'),
+            'generated_at' => now($uiTz)->format('d/m/Y H:i'),
             'rows' => $rows,
             'totals' => [
                 'in_kg' => round((float) $rows->sum('in_kg'), 2),
