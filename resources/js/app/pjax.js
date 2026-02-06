@@ -29,6 +29,9 @@ export function initPJAX() {
   const main = qs('#appMain');
   if (!main) return;
 
+  if (window.__PJAX_INITED__) return;
+  window.__PJAX_INITED__ = true;
+
   const loadingBar = qs('#pjaxLoading');
   const exitModal = qs('#exitModal');
   const exitYes = qs('#exitYes');
@@ -55,6 +58,10 @@ export function initPJAX() {
     busy = true;
     setLoading(true);
 
+    document.dispatchEvent(new CustomEvent('pjax:start', {
+      detail: { url, root: main }
+    }));
+
     try {
       const res = await fetch(url, {
         headers: { 'X-PJAX': '1', 'Accept': 'text/html' },
@@ -68,12 +75,21 @@ export function initPJAX() {
         detail: { url, root: main }
       }));
 
+      document.dispatchEvent(new CustomEvent('pjax:end', {
+        detail: { url, root: main }
+      }));
+
       lastUrl = url;
 
       if (push) history.pushState({ __pjax: true, url }, '', url);
       setActiveNav(url);
     } catch (err) {
       console.error(err);
+
+      document.dispatchEvent(new CustomEvent('pjax:error', {
+        detail: { url, root: main, error: err }
+      }));
+
       window.location.href = url; // fallback hard nav
     } finally {
       setLoading(false);
@@ -150,19 +166,27 @@ export function initPJAX() {
     showExitConfirm();
   });
 
-  // Base history di /app supaya back pertama bisa kita tahan dengan modal
-  const desired = window.location.pathname === '/app'
-    ? '/app/home'
-    : (window.location.pathname + window.location.search + window.location.hash);
+  const desiredFull = toFullPath(desired);
 
   if (window.location.pathname !== '/app') {
     history.replaceState(null, '', '/app');
-    history.pushState({ __pjax: true, url: toFullPath(desired) }, '', toFullPath(desired));
+    history.pushState({ __pjax: true, url: desiredFull }, '', desiredFull);
   } else {
-    history.pushState({ __pjax: true, url: toFullPath(desired) }, '', toFullPath(desired));
+    history.pushState({ __pjax: true, url: desiredFull }, '', desiredFull);
   }
 
-  load(desired, { push: false });
+  const hasInitialHtml = (main.innerHTML || '').trim().length > 0;
+
+  if (hasInitialHtml && window.location.pathname !== '/app') {
+    // Halaman sudah ada konten dari server, jangan fetch lagi.
+    lastUrl = desiredFull;
+
+    document.dispatchEvent(new CustomEvent('pjax:loaded', {
+      detail: { url: desiredFull, root: main }
+    }));
+  } else {
+    load(desiredFull, { push: false });
+  }
 }
 
 document.addEventListener('DOMContentLoaded', initPJAX);

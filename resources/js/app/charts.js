@@ -48,6 +48,7 @@ function initHomeFilters(root) {
       });
     };
 
+    document.addEventListener('pjax:loaded', unlock);
     document.addEventListener('pjax:end', unlock);
     document.addEventListener('pjax:error', unlock);
   }

@@ -26,5 +26,4 @@ function setActiveNav() {
 
 // Jalankan saat pertama kali muat
 document.addEventListener('DOMContentLoaded', setActiveNav);
-// Jalankan setiap kali halaman berpindah (Jika pakai PJAX/Livewire)
-document.addEventListener('pjax:end', setActiveNav);
+document.addEventListener('pjax:loaded', setActiveNav);

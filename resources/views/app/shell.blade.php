@@ -88,21 +88,21 @@
     <nav class="sticky bottom-0 z-20 bg-[#118EEA] rounded-t-[32px] shadow-[0_-8px_30px_rgba(0,0,0,0.1)]">
       <div id="nav-container" class="grid grid-cols-5 gap-1 pt-3 pb-5 px-2 text-[10px] font-medium text-white/70">
 
-        <a href="/app/home" data-nav="/app/home" class="flex flex-col items-center justify-center transition-all duration-200">
+        <a href="/app/home" data-pjax data-nav="/app/home" class="flex flex-col items-center justify-center transition-all duration-200">
           <svg viewBox="0 0 24 24" fill="currentColor" class="w-7 h-7">
             <path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5z"/>
           </svg>
           <span class="mt-1 text-sm text-200 color:white">Beranda</span>
         </a>
 
-        <a href="/app/stock" data-nav="/app/stock" class="flex flex-col items-center justify-center transition-all duration-200">
+        <a href="/app/stock" data-pjax data-nav="/app/stock" class="flex flex-col items-center justify-center transition-all duration-200">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-7 h-7">
             <path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round"/>
           </svg>
           <span class="mt-1 text-sm text-200 color:white">Stok</span>
         </a>
 
-        <a href="/app/input" data-nav="/app/input" class="relative flex flex-col items-center justify-center">
+        <a href="/app/input" data-pjax data-nav="/app/input" class="relative flex flex-col items-center justify-center">
           <div class="btn-input -mt-12 h-14 w-14 bg-white rounded-2xl shadow-xl flex items-center justify-center text-[#118EEA] border-[4px] border-[#118EEA] active:scale-90 transition-transform">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" class="w-7 h-7">
               <path d="M12 5v14M5 12h14" stroke-linecap="round"/>
@@ -111,7 +111,7 @@
           <span class="mt-1 text-sm text-200 color:white">Input</span>
         </a>
 
-        <a href="/app/history" data-nav="/app/history" class="flex flex-col items-center justify-center transition-all duration-200">
+        <a href="/app/history" data-pjax data-nav="/app/history" class="flex flex-col items-center justify-center transition-all duration-200">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-7 h-7">
             <path d="M12 8v5l3 2" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M3 12a9 9 0 1 0 3-6.7" stroke-linecap="round"/>
@@ -119,7 +119,7 @@
           <span class="mt-1 text-sm text-200 color:white">Riwayat</span>
         </a>
 
-        <a href="/app/reports" data-nav="/app/reports" class="flex flex-col items-center justify-center transition-all duration-200">
+        <a href="/app/reports" data-pjax data-nav="/app/reports" class="flex flex-col items-center justify-center transition-all duration-200">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-7 h-7">
             <path d="M7 3h7l3 3v15a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" stroke-linejoin="round"/>
           </svg>
