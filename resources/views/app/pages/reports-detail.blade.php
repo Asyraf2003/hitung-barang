@@ -95,11 +95,32 @@
     <div class="space-y-2">
       @foreach($rows as $r)
         @php
-          $isIn = $r['type'] === 'IN';
-          $label = $isIn ? 'Masuk' : ($r['type']==='OUT' ? 'Keluar' : 'Adjust');
-          $badge = $isIn ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                         : ($r['type']==='OUT' ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                               : 'bg-slate-50 text-slate-700 border-slate-200');
+          $type = (string)($r['type'] ?? '');
+          $isIn = $type === 'IN';
+
+          // transaksi hasil edit/koreksi: punya corrects_id (sesuai ADR + data meta kamu)
+          $isCorrection = !empty($r['corrects_id'] ?? null);
+
+          // label tampilan
+          if ($isIn) {
+            $label = $isCorrection ? 'Masuk (Koreksi)' : 'Masuk';
+          } elseif ($type === 'OUT') {
+            $label = $isCorrection ? 'Keluar (Koreksi)' : 'Keluar';
+          } else {
+            // fallback kalau suatu hari kamu beneran punya tipe lain
+            $label = 'Adjust';
+          }
+
+          // badge warna (koreksi pakai amber biar beda dari IN/OUT normal)
+          if ($isCorrection) {
+            $badge = 'bg-amber-50 text-amber-700 border-amber-200';
+          } else {
+            $badge = $isIn
+              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              : ($type === 'OUT'
+                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                  : 'bg-slate-50 text-slate-700 border-slate-200');
+          }
         @endphp
 
         <div class="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">

@@ -517,39 +517,50 @@ final class AppController extends Controller
             $rows = InventoryMovement::query()
                 ->where('item_type_id', $typeId)
                 ->whereBetween('occurred_at', [$startUtc, $endUtc])
+                ->whereRaw("JSON_EXTRACT(meta, '$.voided_at') IS NULL")
                 ->orderByDesc('occurred_at')
                 ->orderByDesc('id')
                 ->limit(300)
                 ->get()
-                ->map(fn(InventoryMovement $m) => [
-                    'id' => $m->id,
-                    'type' => $m->type,
-                    'qty_kg' => (float) $m->qty_kg,
-                    'occurred_at' => $m->occurred_at?->copy()->setTimezone($uiTz)->format('d/m/Y H:i'),
-                    'note' => $m->note,
-                ]);
+                ->map(function (InventoryMovement $m) use ($uiTz) {
+                    $meta = $m->meta ?? [];
+                    $correctsId = $meta['corrects_id'] ?? null;
+
+                    return [
+                        'id' => $m->id,
+                        'type' => $m->type,
+                        'qty_kg' => (float) $m->qty_kg,
+                        'occurred_at' => $m->occurred_at?->copy()->setTimezone($uiTz)->format('d/m/Y H:i'),
+                        'note' => $m->note,
+                        'corrects_id' => $correctsId ? (int) $correctsId : null,
+                    ];
+                });
 
             $inKg = (float) InventoryMovement::query()
                 ->where('item_type_id', $typeId)
                 ->where('type', 'IN')
                 ->whereBetween('occurred_at', [$startUtc, $endUtc])
+                ->whereRaw("JSON_EXTRACT(meta, '$.voided_at') IS NULL")
                 ->sum('qty_kg');
 
             $outKg = (float) InventoryMovement::query()
                 ->where('item_type_id', $typeId)
                 ->where('type', 'OUT')
                 ->whereBetween('occurred_at', [$startUtc, $endUtc])
+                ->whereRaw("JSON_EXTRACT(meta, '$.voided_at') IS NULL")
                 ->sum('qty_kg');
 
             $balEnd = (float) InventoryMovement::query()
                 ->where('item_type_id', $typeId)
                 ->where('occurred_at', '<=', $endUtc)
+                ->whereRaw("JSON_EXTRACT(meta, '$.voided_at') IS NULL")
                 ->selectRaw("(
                     COALESCE(SUM(CASE WHEN type = 'IN' THEN qty_kg ELSE 0 END),0)
                     -
                     COALESCE(SUM(CASE WHEN type = 'OUT' THEN qty_kg ELSE 0 END),0)
                 ) AS bal")
                 ->value('bal');
+
 
             $data['mode'] = $mode;
             $data['base_date'] = $base->toDateString();
