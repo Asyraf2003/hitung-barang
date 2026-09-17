@@ -13,6 +13,15 @@
     ? "{$span} hari"
     : ($mode === 'weekly' ? "{$span} minggu" : "{$span} bulan");
 
+  $summaryModeLabel = $mode === 'daily'
+    ? 'Harian'
+    : ($mode === 'weekly' ? 'Mingguan' : 'Bulanan');
+
+  $periodInSeries = $charts['inOut']['in'] ?? [];
+  $periodOutSeries = $charts['inOut']['out'] ?? [];
+  $periodInKg = (float) (array_slice($periodInSeries, -1)[0] ?? 0);
+  $periodOutKg = (float) (array_slice($periodOutSeries, -1)[0] ?? 0);
+
   // base_date: tetap hari ini (atau pakai yang datang dari query)
   $base_date = $base_date ?? now($tz)->toDateString();
   $d = Carbon::parse($base_date, $tz)->startOfDay();
@@ -56,14 +65,19 @@
 
 <div class="space-y-3">
   <div class="grid grid-cols-2 gap-3">
-    <div class="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">
+    <div class="col-span-2 rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">
       <div class="text-xs text-slate-500">Total Stok</div>
       <div class="mt-1 text-lg font-semibold">{{ number_format((float)($summary['total_balance_kg'] ?? 0), 2, ',', '.') }} kg</div>
     </div>
 
     <div class="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">
-      <div class="text-xs text-slate-500">Keluar Hari Ini</div>
-      <div class="mt-1 text-lg font-semibold">{{ number_format((float)($summary['today_out_kg'] ?? 0), 2, ',', '.') }} kg</div>
+      <div class="text-xs text-slate-500">Masuk {{ $summaryModeLabel }}</div>
+      <div class="mt-1 text-lg font-semibold">{{ number_format($periodInKg, 2, ',', '.') }} kg</div>
+    </div>
+
+    <div class="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">
+      <div class="text-xs text-slate-500">Keluar {{ $summaryModeLabel }}</div>
+      <div class="mt-1 text-lg font-semibold">{{ number_format($periodOutKg, 2, ',', '.') }} kg</div>
     </div>
   </div>
 
