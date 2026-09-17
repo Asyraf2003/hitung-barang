@@ -1,0 +1,180 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
+use Symfony\Component\Console\Output\BufferedOutput;
+
+final class SafeMaintenanceException extends RuntimeException {}
+
+header('Content-Type: text/plain; charset=utf-8');
+header('X-Robots-Tag: noindex, nofollow, noarchive');
+header('Cache-Control: no-store, max-age=0');
+
+$expectedTokenHash = '__DEPLOY_TOKEN_HASH__';
+$providedToken = (string) ($_GET['token'] ?? '');
+
+if ($providedToken === '' || ! hash_equals($expectedTokenHash, hash('sha256', $providedToken))) {
+    http_response_code(403);
+    exit("Forbidden\n");
+}
+
+$publicPath = __DIR__;
+$appRoot = dirname(__DIR__).'/__APP_DIR_NAME__';
+$cacheDirectory = $appRoot.'/bootstrap/cache';
+$phaseMarker = $cacheDirectory.'/.maintenance-'.$expectedTokenHash.'.phase';
+$results = [];
+
+$record = static function (string $message) use (&$results): void {
+    $results[] = $message;
+};
+
+$fail = static function (string $message): never {
+    throw new SafeMaintenanceException($message);
+};
+
+$resetOpcache = static function () use ($fail, $record): void {
+    $enabled = filter_var(ini_get('opcache.enable'), FILTER_VALIDATE_BOOL);
+
+    if (! $enabled) {
+        $record('OK: web OPcache is not enabled for this request.');
+        return;
+    }
+
+    if (! function_exists('opcache_reset') || ! @opcache_reset()) {
+        $fail('Web OPcache is enabled but could not be reset. Restart PHP-FPM before retrying.');
+    }
+
+    $record('OK: web OPcache reset requested.');
+};
+
+try {
+    if (PHP_VERSION_ID < 80200) {
+        $fail('PHP 8.2 or newer is required. Current: '.PHP_VERSION);
+    }
+
+    foreach ([$appRoot, $appRoot.'/artisan', $appRoot.'/.env', $cacheDirectory, $publicPath.'/build/manifest.json'] as $requiredPath) {
+        if (! file_exists($requiredPath)) {
+            $fail('Required deployment path is missing: '.basename($requiredPath));
+        }
+    }
+
+    if (! is_writable($cacheDirectory)) {
+        $fail('Laravel bootstrap cache directory is not writable by PHP.');
+    }
+
+    if ((string) ($_GET['phase'] ?? '') !== 'maintain') {
+        $cachedFiles = glob($cacheDirectory.'/*.php');
+        if ($cachedFiles === false) {
+            $fail('Unable to enumerate Laravel bootstrap cache files.');
+        }
+
+        foreach ($cachedFiles as $cachedFile) {
+            if (! @unlink($cachedFile)) {
+                $fail('Unable to remove a Laravel bootstrap cache file.');
+            }
+        }
+
+        if (file_put_contents($phaseMarker, 'ready', LOCK_EX) === false) {
+            $fail('Unable to persist the maintenance phase marker.');
+        }
+
+        $resetOpcache();
+        header(
+            'Location: '.basename(__FILE__).'?token='.rawurlencode($providedToken).'&phase=maintain',
+            true,
+            303,
+        );
+        exit;
+    }
+
+    if (! is_file($phaseMarker)) {
+        $fail('Pre-bootstrap cache reset phase has not completed. Use the setup URL without a phase parameter.');
+    }
+
+    foreach ([$appRoot.'/vendor/autoload.php', $appRoot.'/bootstrap/app.php'] as $requiredPath) {
+        if (! file_exists($requiredPath)) {
+            $fail('Required deployment runtime path is missing.');
+        }
+    }
+
+    $writableDirectories = [
+        $cacheDirectory,
+        $appRoot.'/storage/app/private',
+        $appRoot.'/storage/app/public',
+        $appRoot.'/storage/framework/cache/data',
+        $appRoot.'/storage/framework/sessions',
+        $appRoot.'/storage/framework/views',
+        $appRoot.'/storage/logs',
+    ];
+
+    foreach ($writableDirectories as $directory) {
+        if (! is_dir($directory) && ! mkdir($directory, 0775, true) && ! is_dir($directory)) {
+            $fail('Unable to create a required writable directory.');
+        }
+
+        if (! is_writable($directory)) {
+            $fail('A required Laravel directory is not writable by PHP.');
+        }
+    }
+
+    require $appRoot.'/vendor/autoload.php';
+
+    $app = require $appRoot.'/bootstrap/app.php';
+    $app->usePublicPath($publicPath);
+    $kernel = $app->make(ConsoleKernel::class);
+    $kernel->bootstrap();
+
+    if (! $app->environment('production')) {
+        $fail('APP_ENV must be production.');
+    }
+    if ((bool) config('app.debug')) {
+        $fail('APP_DEBUG must be false.');
+    }
+    if ((string) config('app.key') === '') {
+        $fail('APP_KEY is empty.');
+    }
+
+    try {
+        $app->make('db')->connection()->getPdo();
+    } catch (Throwable) {
+        $fail('Database connection failed. Check production DB_* values.');
+    }
+    $record('OK: production database connection succeeded.');
+
+    $commands = [
+        ['optimize:clear', []],
+        ['migrate', ['--force' => true, '--no-interaction' => true]],
+        ['optimize', ['--no-interaction' => true]],
+    ];
+
+    foreach ($commands as [$command, $arguments]) {
+        $output = new BufferedOutput;
+        $exitCode = $kernel->call($command, $arguments, $output);
+
+        if ($exitCode !== 0) {
+            $fail('Artisan command failed: '.$command.'.');
+        }
+
+        $record('OK: php artisan '.$command);
+    }
+
+    @unlink($phaseMarker);
+    $selfDeleted = @unlink(__FILE__);
+    $resetOpcache();
+
+    echo "MAINTENANCE COMPLETE\n";
+    foreach ($results as $result) {
+        echo $result."\n";
+    }
+    echo $selfDeleted
+        ? "OK: maintenance entry deleted itself.\n"
+        : "WARNING: maintenance succeeded, but its entry file could not delete itself. Delete it manually.\n";
+} catch (Throwable $exception) {
+    http_response_code(500);
+    echo "MAINTENANCE FAILED\n";
+    echo $exception instanceof SafeMaintenanceException
+        ? $exception->getMessage()."\n"
+        : "Unexpected maintenance failure (".$exception::class.").\n";
+    echo "The maintenance entry was kept so the setup URL can be retried after fixing the problem.\n";
+}

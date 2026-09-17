@@ -1,0 +1,271 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+umask 022
+
+ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+APP_NAME="${APP_NAME:-hitung-barang-cpanel}"
+APP_DIR_NAME="${APP_DIR_NAME:-hitung-barang}"
+PUBLIC_DIR_NAME="${PUBLIC_DIR_NAME:-public_html}"
+DEPLOY_DIR="${DEPLOY_DIR:-deploy-package}"
+ENV_FILE="${ENV_FILE:-.env.production}"
+SITE_URL="${SITE_URL:-}"
+
+validate_name() {
+    local label="$1"
+    local value="$2"
+    if [[ -z "$value" || "$value" == "." || "$value" == ".." || ! "$value" =~ ^[A-Za-z0-9._-]+$ ]]; then
+        echo "ERROR: $label hanya boleh berisi huruf, angka, titik, garis bawah, atau tanda minus." >&2
+        exit 1
+    fi
+}
+
+env_value() {
+    local key="$1"
+    local value
+    value="$(sed -n "s/^${key}=//p" "$ENV_FILE" | tail -n 1)"
+    value="${value%$'\r'}"
+    if [[ "$value" =~ ^\".*\"$ || "$value" =~ ^\'.*\'$ ]]; then
+        value="${value:1:${#value}-2}"
+    fi
+    printf '%s' "$value"
+}
+
+validate_name "APP_NAME" "$APP_NAME"
+validate_name "APP_DIR_NAME" "$APP_DIR_NAME"
+validate_name "PUBLIC_DIR_NAME" "$PUBLIC_DIR_NAME"
+validate_name "DEPLOY_DIR" "$DEPLOY_DIR"
+
+for command_name in git npm php composer rsync zip unzip sed grep awk sort paste; do
+    if ! command -v "$command_name" >/dev/null 2>&1; then
+        echo "ERROR: command '$command_name' tidak tersedia." >&2
+        exit 1
+    fi
+done
+
+if [[ "$(git rev-parse --is-inside-work-tree 2>/dev/null || true)" != "true" ]]; then
+    echo "ERROR: builder harus dijalankan dari checkout Git hitung-barang." >&2
+    exit 1
+fi
+
+worktree_status="$(git status --porcelain --untracked-files=all)"
+if [[ -n "$worktree_status" ]]; then
+    echo "ERROR: working tree belum bersih. Commit, pindahkan, atau hapus perubahan berikut sebelum membuat paket:" >&2
+    printf '%s\n' "$worktree_status" >&2
+    exit 1
+fi
+
+for required_file in \
+    artisan \
+    composer.json \
+    composer.lock \
+    package.json \
+    package-lock.json \
+    "$ENV_FILE" \
+    public/index.php \
+    public/.htaccess \
+    deploy/cpanel/index.php.template \
+    deploy/cpanel/clear.php.template; do
+    if [[ ! -f "$required_file" ]]; then
+        echo "ERROR: file wajib tidak ditemukan: $required_file" >&2
+        exit 1
+    fi
+done
+
+if [[ "$(env_value APP_ENV)" != "production" ]]; then
+    echo "ERROR: $ENV_FILE harus memiliki APP_ENV=production." >&2
+    exit 1
+fi
+if [[ "$(env_value APP_DEBUG)" != "false" ]]; then
+    echo "ERROR: $ENV_FILE harus memiliki APP_DEBUG=false." >&2
+    exit 1
+fi
+if [[ -z "$(env_value APP_KEY)" ]]; then
+    echo "ERROR: APP_KEY pada $ENV_FILE kosong." >&2
+    exit 1
+fi
+if [[ -z "$(env_value APP_URL)" ]]; then
+    echo "ERROR: APP_URL pada $ENV_FILE kosong." >&2
+    exit 1
+fi
+if [[ -z "$(env_value DB_DATABASE)" || -z "$(env_value DB_USERNAME)" ]]; then
+    echo "ERROR: DB_DATABASE dan DB_USERNAME pada $ENV_FILE wajib terisi." >&2
+    exit 1
+fi
+
+if [[ -z "$SITE_URL" ]]; then
+    SITE_URL="$(env_value APP_URL)"
+fi
+SITE_URL="${SITE_URL%/}"
+packaged_url="$(env_value APP_URL)"
+packaged_url="${packaged_url%/}"
+if [[ "$SITE_URL" != "$packaged_url" ]]; then
+    echo "ERROR: SITE_URL ($SITE_URL) harus sama dengan APP_URL pada $ENV_FILE ($packaged_url)." >&2
+    exit 1
+fi
+
+mkdir -p "$DEPLOY_DIR"
+
+next_id=1
+while [[ -e "$DEPLOY_DIR/$APP_NAME-$(printf '%03d' "$next_id").zip" ]]; do
+    next_id=$((next_id + 1))
+done
+next_id_padded="$(printf '%03d' "$next_id")"
+zip_file="$DEPLOY_DIR/$APP_NAME-$next_id_padded.zip"
+setup_file="$DEPLOY_DIR/$APP_NAME-$next_id_padded-setup.txt"
+stage_dir="$(mktemp -d "${TMPDIR:-/tmp}/$APP_NAME-deploy-$next_id_padded.XXXXXX")"
+app_stage="$stage_dir/$APP_DIR_NAME"
+public_stage="$stage_dir/$PUBLIC_DIR_NAME"
+
+cleanup() {
+    rm -rf "$stage_dir"
+}
+trap cleanup EXIT
+
+echo "==> Install frontend dependencies"
+npm ci
+
+echo "==> Build Vite assets"
+npm run build
+
+if [[ ! -f public/build/manifest.json ]]; then
+    echo "ERROR: public/build/manifest.json tidak dibuat oleh Vite." >&2
+    exit 1
+fi
+
+echo "==> Clear local Laravel caches"
+php artisan optimize:clear >/dev/null
+
+echo "==> Stage Laravel root: $APP_DIR_NAME/"
+mkdir -p "$app_stage" "$public_stage"
+
+rsync -a ./ "$app_stage/" \
+    --exclude "/.git/" \
+    --exclude "/.github/" \
+    --exclude "/.idea/" \
+    --exclude "/.vscode/" \
+    --exclude "/.zed/" \
+    --exclude "/.env" \
+    --exclude "/.env.*" \
+    --exclude "/auth.json" \
+    --exclude "/node_modules/" \
+    --exclude "/vendor/" \
+    --exclude "/tests/" \
+    --exclude "/deploy/" \
+    --exclude "/scripts/" \
+    --exclude "/$DEPLOY_DIR/" \
+    --exclude "/public/" \
+    --exclude "/resources/css/" \
+    --exclude "/resources/js/" \
+    --exclude "/storage/app/public/***" \
+    --exclude "/storage/app/private/***" \
+    --exclude "/storage/framework/cache/data/***" \
+    --exclude "/storage/framework/sessions/***" \
+    --exclude "/storage/framework/testing/***" \
+    --exclude "/storage/framework/views/***" \
+    --exclude "/storage/logs/***" \
+    --exclude "/bootstrap/cache/*.php" \
+    --exclude "/database/*.sqlite" \
+    --exclude "/database/*.sqlite-shm" \
+    --exclude "/database/*.sqlite-wal" \
+    --exclude "/.phpunit.cache/" \
+    --exclude "/.phpunit.result.cache" \
+    --exclude "/phpunit.xml" \
+    --exclude "/package.json" \
+    --exclude "/package-lock.json" \
+    --exclude "/vite.config.js" \
+    --exclude "/Makefile" \
+    --exclude "/docs/" \
+    --exclude "/README.md" \
+    --exclude "/AGENTS.md"
+
+cp "$ENV_FILE" "$app_stage/.env"
+chmod 0600 "$app_stage/.env"
+
+mkdir -p \
+    "$app_stage/bootstrap/cache" \
+    "$app_stage/storage/app/private" \
+    "$app_stage/storage/app/public" \
+    "$app_stage/storage/framework/cache/data" \
+    "$app_stage/storage/framework/sessions" \
+    "$app_stage/storage/framework/testing" \
+    "$app_stage/storage/framework/views" \
+    "$app_stage/storage/logs"
+
+echo "==> Stage public document root: $PUBLIC_DIR_NAME/"
+rsync -a public/ "$public_stage/" \
+    --exclude "/hot" \
+    --exclude "/storage" \
+    --exclude "/storage/***"
+
+sed "s/__APP_DIR_NAME__/$APP_DIR_NAME/g" \
+    deploy/cpanel/index.php.template > "$public_stage/index.php"
+
+clear_token="$(php -r 'echo bin2hex(random_bytes(32));')"
+clear_token_hash="$(php -r 'echo hash("sha256", $argv[1]);' "$clear_token")"
+clear_file_name="clear-${clear_token_hash:0:16}.php"
+
+sed \
+    -e "s/__APP_DIR_NAME__/$APP_DIR_NAME/g" \
+    -e "s/__DEPLOY_TOKEN_HASH__/$clear_token_hash/g" \
+    deploy/cpanel/clear.php.template > "$public_stage/$clear_file_name"
+
+php -l "$public_stage/index.php" >/dev/null
+php -l "$public_stage/$clear_file_name" >/dev/null
+
+echo "==> Install production Composer dependencies"
+(
+    cd "$app_stage"
+    COMPOSER_ALLOW_SUPERUSER=1 composer install \
+        --no-dev \
+        --optimize-autoloader \
+        --no-interaction \
+        --prefer-dist
+)
+
+rm -f \
+    "$app_stage/bootstrap/cache/config.php" \
+    "$app_stage/bootstrap/cache/events.php" \
+    "$app_stage"/bootstrap/cache/routes*.php
+
+echo "==> Normalize shared-hosting permissions"
+find "$app_stage" "$public_stage" -type d -exec chmod 0755 {} +
+find "$app_stage" "$public_stage" -type f -exec chmod 0644 {} +
+chmod 0755 "$app_stage/artisan"
+chmod 0600 "$app_stage/.env"
+
+echo "==> Create ZIP: $zip_file"
+zip_file_absolute="$ROOT_DIR/$zip_file"
+(
+    cd "$stage_dir"
+    zip -qr "$zip_file_absolute" "$APP_DIR_NAME" "$PUBLIC_DIR_NAME"
+)
+
+echo "==> Verify deployment package"
+bash scripts/verify-cpanel-package.sh \
+    "$zip_file" \
+    "$APP_DIR_NAME" \
+    "$PUBLIC_DIR_NAME" \
+    "$SITE_URL" \
+    "$clear_file_name"
+
+{
+    echo "hitung-barang cPanel deployment"
+    echo "ZIP: $(basename "$zip_file")"
+    echo "Extract the ZIP directly into the cPanel home directory."
+    echo "Top-level folders in ZIP: $APP_DIR_NAME/ and $PUBLIC_DIR_NAME/."
+    echo "Packaged environment: $APP_DIR_NAME/.env (copied from local $ENV_FILE)."
+    echo "After extraction, open this one-time maintenance URL:"
+    echo "URL: $SITE_URL/$clear_file_name?token=$clear_token"
+    echo "$clear_file_name clears pre-bootstrap caches, refreshes web OPcache when enabled,"
+    echo "verifies the production database, then runs optimize:clear, migrate --force, optimize, and deletes itself after success."
+} > "$setup_file"
+
+chmod 600 "$zip_file" "$setup_file"
+
+echo "==> Done"
+echo "ZIP: $zip_file"
+echo "SETUP: $setup_file"
+echo "Keep both files private; the ZIP contains production credentials and setup contains the one-time token."
