@@ -3,25 +3,36 @@ function qs(sel, root = document) {
 }
 
 function toFullPath(input) {
-  // pastikan selalu simpan query (?a=b) dan hash (#x)
   const u = new URL(String(input || ''), window.location.origin);
   return u.pathname + u.search + u.hash;
 }
 
 function navKey(input) {
-  // buat highlight nav: cukup pathname saja (biar /app/reports?x=y tetap highlight "reports")
-  const u = new URL(String(input || ''), window.location.origin);
-  return u.pathname;
+  const pathname = new URL(String(input || ''), window.location.origin).pathname;
+
+  // Detail laporan tetap milik tab Laporan.
+  if (pathname.startsWith('/app/reports')) return '/app/reports';
+
+  return pathname;
 }
 
 function setActiveNav(url) {
   const key = navKey(url);
+
   document.querySelectorAll('[data-nav]').forEach((a) => {
     const active = a.getAttribute('data-nav') === key;
 
-    a.classList.toggle('bg-[#118EEA]/10', active);
-    a.classList.toggle('text-[#118EEA]', active);
-    a.classList.toggle('font-semibold', active);
+    // Bersihkan class dari implementasi active-nav lama agar hanya ada satu owner.
+    a.classList.remove('bg-[#118EEA]/10', 'text-[#118EEA]', 'font-semibold');
+    a.classList.toggle('text-white', active);
+    a.classList.toggle('text-white/70', !active);
+    a.classList.toggle('font-bold', active);
+
+    if (active) {
+      a.setAttribute('aria-current', 'page');
+    } else {
+      a.removeAttribute('aria-current');
+    }
   });
 }
 
@@ -38,7 +49,9 @@ export function initPJAX() {
   const exitNo = qs('#exitNo');
 
   const current = window.location.pathname + window.location.search + window.location.hash;
-  let lastUrl = window.location.pathname === '/app' ? '/app/home' : current;
+  const startedAtShell = window.location.pathname === '/app';
+  const desiredFull = startedAtShell ? '/app/home' : toFullPath(current);
+  let lastUrl = desiredFull;
 
   let busy = false;
 
@@ -50,7 +63,6 @@ export function initPJAX() {
   async function load(url, { push = true } = {}) {
     url = toFullPath(url);
 
-    // expose helpers (biar modul lain aman)
     window.__pjaxLoad = (u, opts) => load(u, opts);
     window.__pjaxReload = () => load(lastUrl, { push: false });
 
@@ -70,6 +82,11 @@ export function initPJAX() {
       if (!res.ok) throw new Error(`Fetch ${url} failed (${res.status})`);
 
       main.innerHTML = await res.text();
+      lastUrl = url;
+
+      // URL, UI, dan bottom-nav harus berpindah sebagai satu state.
+      if (push) history.pushState({ __pjax: true, url }, '', url);
+      setActiveNav(url);
 
       document.dispatchEvent(new CustomEvent('pjax:loaded', {
         detail: { url, root: main }
@@ -78,11 +95,6 @@ export function initPJAX() {
       document.dispatchEvent(new CustomEvent('pjax:end', {
         detail: { url, root: main }
       }));
-
-      lastUrl = url;
-
-      if (push) history.pushState({ __pjax: true, url }, '', url);
-      setActiveNav(url);
     } catch (err) {
       console.error(err);
 
@@ -90,7 +102,7 @@ export function initPJAX() {
         detail: { url, root: main, error: err }
       }));
 
-      window.location.href = url; // fallback hard nav
+      window.location.href = url;
     } finally {
       setLoading(false);
       busy = false;
@@ -113,12 +125,11 @@ export function initPJAX() {
 
     const onYes = () => {
       cleanup();
-      history.back(); // keluar beneran (ke entry sebelum app)
+      history.back();
     };
 
     const onNo = () => {
       cleanup();
-      // tahan user di app: dorong balik ke lastUrl (FULL PATH)
       history.pushState({ __pjax: true, url: lastUrl }, '', lastUrl);
       load(lastUrl, { push: false });
     };
@@ -144,7 +155,7 @@ export function initPJAX() {
 
     e.preventDefault();
 
-    const action = form.getAttribute('action') || window.location.pathname; // action biasanya tanpa query
+    const action = form.getAttribute('action') || window.location.pathname;
     const fd = new FormData(form);
     const params = new URLSearchParams();
 
@@ -162,26 +173,26 @@ export function initPJAX() {
       load(e.state.url, { push: false });
       return;
     }
-    // state null => user mau keluar dari app
+
     showExitConfirm();
   });
 
-  const desiredFull = toFullPath(desired);
-
-  if (window.location.pathname !== '/app') {
+  // Sisipkan entry /app sebagai pintu keluar, lalu simpan halaman aktif di atasnya.
+  if (!startedAtShell) {
     history.replaceState(null, '', '/app');
-    history.pushState({ __pjax: true, url: desiredFull }, '', desiredFull);
-  } else {
-    history.pushState({ __pjax: true, url: desiredFull }, '', desiredFull);
   }
+  history.pushState({ __pjax: true, url: desiredFull }, '', desiredFull);
+  setActiveNav(desiredFull);
 
   const hasInitialHtml = (main.innerHTML || '').trim().length > 0;
 
-  if (hasInitialHtml && window.location.pathname !== '/app') {
-    // Halaman sudah ada konten dari server, jangan fetch lagi.
-    lastUrl = desiredFull;
-
+  if (hasInitialHtml && !startedAtShell) {
+    // Direct load /app/{page}: HTML sudah diberikan server, tidak perlu fetch kedua kali.
     document.dispatchEvent(new CustomEvent('pjax:loaded', {
+      detail: { url: desiredFull, root: main }
+    }));
+
+    document.dispatchEvent(new CustomEvent('pjax:end', {
       detail: { url: desiredFull, root: main }
     }));
   } else {
