@@ -7,6 +7,7 @@ app_dir="${2:-hitung-barang}"
 public_dir="${3:-public_html}"
 site_url="${4:-}"
 clear_file_name="${5:-}"
+env_source_file="${6:-.env.production}"
 site_url="${site_url%/}"
 
 if [[ -z "$zip_file" || ! -f "$zip_file" ]]; then
@@ -15,6 +16,10 @@ if [[ -z "$zip_file" || ! -f "$zip_file" ]]; then
 fi
 if [[ -z "$site_url" ]]; then
     echo "ERROR: SITE_URL kosong." >&2
+    exit 1
+fi
+if [[ ! -f "$env_source_file" ]]; then
+    echo "ERROR: sumber .env.production tidak tersedia untuk verifikasi." >&2
     exit 1
 fi
 if [[ ! "$clear_file_name" =~ ^clear-[a-f0-9]{16}\.php$ ]]; then
@@ -26,10 +31,11 @@ listing_file="$(mktemp "${TMPDIR:-/tmp}/hitung-barang-zip-list.XXXXXX")"
 permissions_file="$(mktemp "${TMPDIR:-/tmp}/hitung-barang-zip-permissions.XXXXXX")"
 index_file="$(mktemp "${TMPDIR:-/tmp}/hitung-barang-index.XXXXXX")"
 clear_file="$(mktemp "${TMPDIR:-/tmp}/hitung-barang-clear.XXXXXX")"
+env_file="$(mktemp "${TMPDIR:-/tmp}/hitung-barang-env.XXXXXX")"
 manifest_file="$(mktemp "${TMPDIR:-/tmp}/hitung-barang-manifest.XXXXXX")"
 
 cleanup() {
-    rm -f "$listing_file" "$permissions_file" "$index_file" "$clear_file" "$manifest_file"
+    rm -f "$listing_file" "$permissions_file" "$index_file" "$clear_file" "$env_file" "$manifest_file"
 }
 trap cleanup EXIT
 
@@ -68,6 +74,7 @@ if [[ "$top_levels" != "$expected_top_levels" ]]; then
 fi
 
 require_entry "$app_dir/artisan"
+require_entry "$app_dir/.env"
 require_entry "$app_dir/vendor/autoload.php"
 require_entry "$app_dir/config/dompdf.php"
 require_entry "$public_dir/index.php"
@@ -76,13 +83,15 @@ require_entry "$public_dir/build/manifest.json"
 require_entry "$public_dir/$clear_file_name"
 
 require_mode "$app_dir/" "drwxr-xr-x"
+require_mode "$app_dir/.env" "-rw-------"
 require_mode "$public_dir/" "drwxr-xr-x"
 require_mode "$public_dir/index.php" "-rw-r--r--"
 require_mode "$public_dir/$clear_file_name" "-rw-r--r--"
 
 while IFS= read -r entry; do
     case "$entry" in
-        "$app_dir/.env"*) fail "file environment rahasia ikut ZIP: $entry" ;;
+        "$app_dir/.env") ;;
+        "$app_dir/.env"*) fail "file environment tambahan ikut ZIP: $entry" ;;
     esac
 
     case "$entry" in
@@ -112,6 +121,7 @@ done < "$listing_file"
 
 unzip -p "$zip_file" "$public_dir/index.php" > "$index_file"
 unzip -p "$zip_file" "$public_dir/$clear_file_name" > "$clear_file"
+unzip -p "$zip_file" "$app_dir/.env" > "$env_file"
 unzip -p "$zip_file" "$public_dir/build/manifest.json" > "$manifest_file"
 
 if grep -Fq "__APP_DIR_NAME__" "$index_file" "$clear_file"; then
@@ -145,9 +155,13 @@ if ! grep -Fq 'resources/js/app.js' "$manifest_file" || ! grep -Fq 'resources/cs
     fail "Vite manifest tidak memuat entry app.js dan app.css"
 fi
 
+if ! cmp -s "$env_source_file" "$env_file"; then
+    fail "isi .env ZIP tidak identik dengan sumber .env.production"
+fi
+
 if (( failures > 0 )); then
     echo "ZIP verification failed with $failures problem(s)." >&2
     exit 1
 fi
 
-echo "OK: ZIP update structure, Vite assets, vendor, DomPDF config, preserved server .env, and maintenance entry verified."
+echo "OK: ZIP structure, Vite assets, vendor, DomPDF config, exact production .env (0600), and maintenance entry verified."
