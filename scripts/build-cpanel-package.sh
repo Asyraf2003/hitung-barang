@@ -66,6 +66,7 @@ for required_file in \
     "$ENV_FILE" \
     public/index.php \
     public/.htaccess \
+    config/dompdf.php \
     deploy/cpanel/index.php.template \
     deploy/cpanel/clear.php.template; do
     if [[ ! -f "$required_file" ]]; then
@@ -166,6 +167,7 @@ rsync -a ./ "$app_stage/" \
     --exclude "/storage/framework/testing/***" \
     --exclude "/storage/framework/views/***" \
     --exclude "/storage/logs/***" \
+    --exclude "/storage/framework/maintenance.php" \
     --exclude "/bootstrap/cache/*.php" \
     --exclude "/database/*.sqlite" \
     --exclude "/database/*.sqlite-shm" \
@@ -225,6 +227,8 @@ echo "==> Install production Composer dependencies"
         --prefer-dist
 )
 
+rm -f "$app_stage/.env"
+
 rm -f \
     "$app_stage/bootstrap/cache/config.php" \
     "$app_stage/bootstrap/cache/events.php" \
@@ -234,8 +238,6 @@ echo "==> Normalize shared-hosting permissions"
 find "$app_stage" "$public_stage" -type d -exec chmod 0755 {} +
 find "$app_stage" "$public_stage" -type f -exec chmod 0644 {} +
 chmod 0755 "$app_stage/artisan"
-chmod 0600 "$app_stage/.env"
-
 echo "==> Create ZIP: $zip_file"
 zip_file_absolute="$ROOT_DIR/$zip_file"
 (
@@ -256,11 +258,15 @@ bash scripts/verify-cpanel-package.sh \
     echo "ZIP: $(basename "$zip_file")"
     echo "Extract the ZIP directly into the cPanel home directory."
     echo "Top-level folders in ZIP: $APP_DIR_NAME/ and $PUBLIC_DIR_NAME/."
-    echo "Packaged environment: $APP_DIR_NAME/.env (copied from local $ENV_FILE)."
+    echo "Mode: update existing production (not a fresh install)."
+    echo "Local $ENV_FILE validated production settings; it is NOT included in the ZIP."
+    echo "Production $APP_DIR_NAME/.env, database, and storage must already exist and stay unchanged."
+    echo "Extract the ZIP as an overlay into cPanel home; do not delete existing directories."
     echo "After extraction, open this one-time maintenance URL:"
     echo "URL: $SITE_URL/$clear_file_name?token=$clear_token"
     echo "$clear_file_name clears pre-bootstrap caches, refreshes web OPcache when enabled,"
-    echo "verifies the production database, then runs optimize:clear, migrate --force, optimize, and deletes itself after success."
+    echo "verifies the production database and DomPDF public path, runs optimize:clear and optimize,"
+    echo "then deletes itself after success. It does NOT run database migrations."
 } > "$setup_file"
 
 chmod 600 "$zip_file" "$setup_file"
@@ -268,4 +274,4 @@ chmod 600 "$zip_file" "$setup_file"
 echo "==> Done"
 echo "ZIP: $zip_file"
 echo "SETUP: $setup_file"
-echo "Keep both files private; the ZIP contains production credentials and setup contains the one-time token."
+echo "Keep the setup file private; it contains the one-time maintenance token. The ZIP does not contain .env."
