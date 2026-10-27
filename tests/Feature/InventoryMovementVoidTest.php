@@ -9,6 +9,15 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
+function makeUserForVoidRegression(): User
+{
+    return User::query()->create([
+        'name' => 'Void Regression Tester',
+        'email' => 'void-regression@example.test',
+        'password' => 'test-only-password',
+    ]);
+}
+
 function makeItemTypeForVoidRegression(): ItemType
 {
     $item = Item::query()->create([
@@ -32,7 +41,7 @@ test('deleted stock in is retained as void and excluded from balance and dashboa
 
     expect((float) $type->fresh()->balance_kg)->toBe(8.25);
 
-    $this->actingAs(User::factory()->create())
+    $this->actingAs(makeUserForVoidRegression())
         ->postJson("/app/moves/{$move->id}/delete")
         ->assertOk()
         ->assertJsonPath('ok', true);
@@ -68,7 +77,7 @@ test('stock out cancellation restores balance once and cannot be repeated or edi
     $service->recordIn($type->id, 10.0);
     $out = $service->recordOut($type->id, 4.0);
 
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(makeUserForVoidRegression());
 
     $this->postJson("/app/moves/{$out->id}/delete")
         ->assertOk()
@@ -96,7 +105,7 @@ test('an in movement cannot be cancelled when later out movements still consume 
     $in = $service->recordIn($type->id, 5.0);
     $service->recordOut($type->id, 3.0);
 
-    $this->actingAs(User::factory()->create())
+    $this->actingAs(makeUserForVoidRegression())
         ->postJson("/app/moves/{$in->id}/delete")
         ->assertStatus(422)
         ->assertJsonPath('ok', false);
