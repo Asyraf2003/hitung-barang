@@ -142,9 +142,15 @@ try {
     }
     $record('OK: production database connection succeeded.');
 
+    $actualPublicPath = realpath($publicPath);
+    $dompdfPublicPath = realpath((string) config('dompdf.public_path'));
+    if ($actualPublicPath === false || $dompdfPublicPath !== $actualPublicPath) {
+        $fail('DomPDF public path does not resolve to active public_html.');
+    }
+    $record('OK: DomPDF public path resolves to active public_html.');
+
     $commands = [
         ['optimize:clear', []],
-        ['migrate', ['--force' => true, '--no-interaction' => true]],
         ['optimize', ['--no-interaction' => true]],
     ];
 
