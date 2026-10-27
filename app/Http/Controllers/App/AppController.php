@@ -145,7 +145,8 @@ final class AppController extends Controller
 
             $movQ = InventoryMovement::query()
                 ->select(['type', 'qty_kg', 'occurred_at', 'item_type_id'])
-                ->whereBetween('occurred_at', [$startUtc, $endUtc]);
+                ->whereBetween('occurred_at', [$startUtc, $endUtc])
+                ->whereRaw("JSON_EXTRACT(meta, '$.voided_at') IS NULL");
 
             if ($filterTypeIds !== null) {
                 if (count($filterTypeIds) === 0) {
@@ -197,7 +198,8 @@ final class AppController extends Controller
             ];
 
             // Summary: balance + today in/out (UI timezone)
-            $sumBase = InventoryMovement::query();
+            $sumBase = InventoryMovement::query()
+                ->whereRaw("JSON_EXTRACT(meta, '$.voided_at') IS NULL");
             if ($filterTypeIds !== null) {
                 if (count($filterTypeIds) === 0) {
                     $sumBase->whereRaw('1=0');
