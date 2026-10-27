@@ -38,7 +38,7 @@ validate_name "APP_DIR_NAME" "$APP_DIR_NAME"
 validate_name "PUBLIC_DIR_NAME" "$PUBLIC_DIR_NAME"
 validate_name "DEPLOY_DIR" "$DEPLOY_DIR"
 
-for command_name in git npm php composer rsync zip unzip sed grep awk sort paste; do
+for command_name in git npm php composer rsync zip unzip sed grep awk sort paste cmp; do
     if ! command -v "$command_name" >/dev/null 2>&1; then
         echo "ERROR: command '$command_name' tidak tersedia." >&2
         exit 1
@@ -227,8 +227,6 @@ echo "==> Install production Composer dependencies"
         --prefer-dist
 )
 
-rm -f "$app_stage/.env"
-
 rm -f \
     "$app_stage/bootstrap/cache/config.php" \
     "$app_stage/bootstrap/cache/events.php" \
@@ -238,6 +236,7 @@ echo "==> Normalize shared-hosting permissions"
 find "$app_stage" "$public_stage" -type d -exec chmod 0755 {} +
 find "$app_stage" "$public_stage" -type f -exec chmod 0644 {} +
 chmod 0755 "$app_stage/artisan"
+chmod 0600 "$app_stage/.env"
 echo "==> Create ZIP: $zip_file"
 zip_file_absolute="$ROOT_DIR/$zip_file"
 (
@@ -251,16 +250,18 @@ bash scripts/verify-cpanel-package.sh \
     "$APP_DIR_NAME" \
     "$PUBLIC_DIR_NAME" \
     "$SITE_URL" \
-    "$clear_file_name"
+    "$clear_file_name" \
+    "$ENV_FILE"
 
 {
     echo "hitung-barang cPanel deployment"
     echo "ZIP: $(basename "$zip_file")"
     echo "Extract the ZIP directly into the cPanel home directory."
     echo "Top-level folders in ZIP: $APP_DIR_NAME/ and $PUBLIC_DIR_NAME/."
-    echo "Mode: update existing production (not a fresh install)."
-    echo "Local $ENV_FILE validated production settings; it is NOT included in the ZIP."
-    echo "Production $APP_DIR_NAME/.env, database, and storage must already exist and stay unchanged."
+    echo "Mode: ready-to-install production overlay."
+    echo "Packaged $APP_DIR_NAME/.env is an exact copy of local $ENV_FILE."
+    echo "Extracting WILL replace existing $APP_DIR_NAME/.env. Confirm the APP_KEY and DB_* settings before deployment."
+    echo "Production database and existing storage files are not included in the ZIP."
     echo "Extract the ZIP as an overlay into cPanel home; do not delete existing directories."
     echo "After extraction, open this one-time maintenance URL:"
     echo "URL: $SITE_URL/$clear_file_name?token=$clear_token"
@@ -274,4 +275,4 @@ chmod 600 "$zip_file" "$setup_file"
 echo "==> Done"
 echo "ZIP: $zip_file"
 echo "SETUP: $setup_file"
-echo "Keep the setup file private; it contains the one-time maintenance token. The ZIP does not contain .env."
+echo "Keep both files private; the ZIP contains production secrets in .env and setup contains the one-time token."
