@@ -194,7 +194,7 @@
               @if($isVoided)
                 @if(!empty($r['voided_at']))
                   <div class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-400">
-                    Dikoreksi pada: {{ $r['voided_at'] }}
+                    Dibatalkan pada: {{ $r['voided_at'] }}
                   </div>
                 @endif
               @else
