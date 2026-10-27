@@ -30,7 +30,8 @@ final class InventoryService
     public function balanceKg(int $itemTypeId, ?Carbon $at = null): float
     {
         $base = InventoryMovement::query()
-            ->where('item_type_id', $itemTypeId);
+            ->where('item_type_id', $itemTypeId)
+            ->whereRaw("JSON_EXTRACT(meta, '$.voided_at') IS NULL");
 
         if ($at) {
             $base->where('occurred_at', '<=', $at);
@@ -127,7 +128,12 @@ final class InventoryService
     {
         DB::transaction(function () use ($movementId) {
             $m = InventoryMovement::query()->lockForUpdate()->findOrFail($movementId);
-            
+
+            $meta = $m->meta ?? [];
+            if (!empty($meta['voided_at'])) {
+                throw new RuntimeException('Transaksi ini sudah dibatalkan dan tidak dapat dihapus ulang.');
+            }
+
             /** @var ItemType $t */
             $t = ItemType::query()->whereKey($m->item_type_id)->lockForUpdate()->firstOrFail();
 
@@ -152,8 +158,12 @@ final class InventoryService
             $t->balance_kg = number_format(round($newBal, 2), 2, '.', '');
             $t->save();
 
-            // Hapus record movement
-            $m->delete();
+            // Batalkan secara permanen tanpa menghapus jejak audit.
+            $m->meta = array_merge($meta, [
+                'voided_at' => now()->toISOString(),
+                'void_reason' => 'deleted',
+            ]);
+            $m->save();
         });
     }
 
@@ -169,7 +179,7 @@ final class InventoryService
 
             $meta = $m->meta ?? [];
             if (!empty($meta['voided_at'])) {
-                throw new RuntimeException('Transaksi ini sudah dikoreksi dan tidak bisa diedit lagi.');
+                throw new RuntimeException('Transaksi ini sudah dibatalkan atau dikoreksi dan tidak bisa diedit lagi.');
             }
 
             /** @var ItemType $t */
